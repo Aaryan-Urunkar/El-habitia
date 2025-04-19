@@ -85,20 +85,18 @@ export default function Personality() {
     try {
       setIsSubmitting(true);
       const token = await AsyncStorage.getItem('userToken');
-      const userId = await AsyncStorage.getItem('userId');
       
-      if (!token || !userId) {
+      if (!token) {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch('/api/auth/personality', {
+      const response = await fetch('http://192.168.24.47:5001/api/auth/personality', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          uid: userId,
           procrastinationResponse: answers.procrastinationResponse,
           sleepResponse: answers.sleepResponse,
           alcoholSmokingResponse: answers.alcoholSmokingResponse
