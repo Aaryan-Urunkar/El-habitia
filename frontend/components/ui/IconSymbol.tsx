@@ -50,7 +50,14 @@ const MAPPING = {
   'bubble': 'chat-bubble-outline',
   'bubble.fill': 'chat-bubble',
   'message': 'message',
-  'message.fill': 'message'
+  'message.fill': 'message',
+  'chart.bar.fill': 'bar-chart',
+  'bubble.left.fill': 'chat-bubble',
+  'bubble.left.right.fill': 'question-answer',
+  'arrow.up': 'arrow-upward',
+  'bubble.left.and.bubble.right': 'forum',
+  'arrowshape.turn.up.right': 'reply',
+  'trophy.fill': 'emoji-events'
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],

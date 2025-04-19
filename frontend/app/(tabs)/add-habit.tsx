@@ -17,6 +17,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { TextInput } from '@/components/ui/TextInput';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
+import { createHabit } from '@/api/habit';
 
 // Habit categories
 const CATEGORIES = [
@@ -36,11 +37,13 @@ export default function AddHabitScreen() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [recurrence, setRecurrence] = useState('daily');
+  const [isNegative, setIsNegative] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Handle form submission
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Simple validation
     if (!name.trim()) {
       Alert.alert('Missing Information', 'Please enter a habit name');
@@ -53,10 +56,16 @@ export default function AddHabitScreen() {
     }
     
     setIsSubmitting(true);
+    setError(null);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Call the API to create the habit
+      await createHabit({
+        title: name,
+        description: description,
+        isNegative: isNegative
+      });
+      
       Alert.alert(
         'Success!', 
         'Your new habit has been created.',
@@ -64,7 +73,13 @@ export default function AddHabitScreen() {
           { text: 'OK', onPress: () => router.push('./index') }
         ]
       );
-    }, 1500);
+    } catch (err) {
+      console.error('Failed to create habit:', err);
+      setError('Failed to create habit. Please try again.');
+      Alert.alert('Error', 'Failed to create habit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -203,6 +218,23 @@ export default function AddHabitScreen() {
               </View>
             </View>
             
+            {/* Is Negative Toggle */}
+            <View style={styles.toggleContainer}>
+              <View>
+                <ThemedText>Negative Habit (to avoid)</ThemedText>
+                <ThemedText variant="caption" style={{ color: colors.subtext }}>
+                  Toggle this for habits you want to break
+                </ThemedText>
+              </View>
+              <Switch
+                trackColor={{ false: '#767577', true: colors.error }}
+                thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : isNegative ? colors.error : '#f4f3f4'}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={setIsNegative}
+                value={isNegative}
+              />
+            </View>
+            
             {/* Visibility Toggle */}
             <View style={styles.toggleContainer}>
               <View>
@@ -219,6 +251,13 @@ export default function AddHabitScreen() {
                 value={isPublic}
               />
             </View>
+            
+            {/* Error message */}
+            {error && (
+              <ThemedText style={{ color: colors.error, textAlign: 'center', marginTop: 8 }}>
+                {error}
+              </ThemedText>
+            )}
             
             {/* Submit Button */}
             <TouchableOpacity 
