@@ -2,34 +2,45 @@ import { useState } from 'react';
 import { StyleSheet, View, TouchableOpacity, Image, ScrollView, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/TextInput';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
-// Import the Firebase auth functions directly
-import { createUserWithEmailAndPassword } from '@/firebase/auth';
-// Import Firestore functions for creating user document
-import { firestore } from '@/firebase/config';
-import { doc, setDoc } from 'firebase/firestore';
+
+const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL;
 
 export default function SignupScreen() {
   const { colors, scheme } = useTheme();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
+    name?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
-  }>({});
+  }>({
+    name: undefined,
+    email: undefined,
+    password: undefined,
+    confirmPassword: undefined,
+  });
 
   const handleSignup = async () => {
     // Reset errors
-    setValidationErrors({});
+    setValidationErrors({ name: undefined, email: undefined, password: undefined, confirmPassword: undefined });
     let isValid = true;
+
+    // Name validation
+    if (!name.trim()) {
+      setValidationErrors(prev => ({ ...prev, name: 'Name is required' }));
+      isValid = false;
+    }
 
     // Email validation
     if (!email.trim()) {
@@ -60,52 +71,45 @@ export default function SignupScreen() {
         setIsLoading(true);
         console.log('[Signup] Starting signup process with email:', email);
         
-        // Directly use Firebase auth
-        console.log('[Signup] Creating Firebase auth user');
-        const userCredential = await createUserWithEmailAndPassword(email, password);
-        const firebaseUser = userCredential.user;
-        console.log('[Signup] User created successfully with uid:', firebaseUser.uid);
+        // Replace axios with fetch
+        const response = await fetch(`http://192.168.24.47:5001/api/auth/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: name,
+            email: email,
+            password: password,
+          }),
+        });
+
+        console.log('[Signup] Response status:', response.status);
+        const responseData = await response.json();
         
-        try {
-          // Create user document in Firestore
-          console.log('[Signup] Creating user document in Firestore');
-          await setDoc(doc(firestore, 'users', firebaseUser.uid), {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || email.split('@')[0], // Use email prefix as default display name
-            photoURL: firebaseUser.photoURL,
-            createdAt: new Date(),
-            currentMode: 'growth', // Default mode
-          });
-          console.log('[Signup] User document created in Firestore');
-        } catch (firestoreError: any) {
-          console.error('[Signup] Firestore error:', firestoreError);
-          // Even if Firestore creation fails, the user can still proceed
-          // We'll just log the error but not stop the authentication flow
+        if (!response.ok) {
+          console.error('[Signup] Server error response:', responseData);
+          throw new Error(responseData.message || 'Signup failed');
+        }
+
+        console.log('[Signup] User created successfully:', responseData);
+        
+        // Store user token in AsyncStorage
+        if (responseData.token) {
+          await AsyncStorage.setItem('userToken', responseData.token);
+          console.log('[Signup] Auth token stored in AsyncStorage');
+        } else {
+          console.warn('[Signup] No token received from server');
         }
         
-        // Navigate to personality quiz even if Firestore document creation fails
-        console.log('[Signup] Navigating to personality quiz');
+        // Navigate to preference form instead of personality quiz
+        console.log('[Signup] Navigating to preference form');
         router.navigate('/(auth)/personality');
-      } catch (error: any) {
+      } catch (error) {
         console.error('[Signup] Error during signup:', error);
-        console.error('[Signup] Error code:', error.code);
-        console.error('[Signup] Error message:', error.message);
-        console.error('[Signup] Full error object:', JSON.stringify(error, null, 2));
         
-        const errorCode = error.code || '';
         let errorMessage = 'An error occurred during signup.';
-        
-        if (errorCode.includes('auth/email-already-in-use')) {
-          console.log('[Signup] Detected email already in use error');
-          errorMessage = 'This email is already in use.';
-        } else if (errorCode.includes('auth/invalid-email')) {
-          console.log('[Signup] Detected invalid email error');
-          errorMessage = 'Invalid email address.';
-        } else if (errorCode.includes('auth/weak-password')) {
-          console.log('[Signup] Detected weak password error');
-          errorMessage = 'Password is too weak.';
-        } else if (error.message) {
-          console.log('[Signup] Using error message from exception');
+        if (error instanceof Error) {
           errorMessage = error.message;
         }
         
@@ -120,13 +124,18 @@ export default function SignupScreen() {
   const handleGoogleSignIn = async () => {
     try {
       // This is a placeholder. You'll need to implement Google Sign-In
-      // using Expo's Google authentication or Firebase's Google provider
+      // using Expo's Google authentication
       Alert.alert('Google Sign In', 'Google sign in implementation required');
       
       // Once you have the Google ID token, you would call:
-      // await signInWithGoogle(googleIdToken);
-    } catch (error: any) {
-      Alert.alert('Google Sign In Failed', error.message);
+      // const response = await fetch('http://localhost:3000/api/routes/google-signup', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ token: googleIdToken }),
+      // });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      Alert.alert('Google Sign In Failed', errorMessage);
     }
   };
 
@@ -161,7 +170,17 @@ export default function SignupScreen() {
             </ThemedText>
           </View>
           
-          <View style={[styles.form, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.form, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TextInput
+              label="Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your name"
+              autoCapitalize="words"
+              error={validationErrors.name}
+              style={styles.input}
+            />
+            
             <TextInput
               label="Email"
               value={email}
@@ -217,14 +236,14 @@ export default function SignupScreen() {
             <View style={styles.footer}>
               <ThemedText variant="caption">Already have an account?</ThemedText>
               <Link href="/login" asChild>
-                <TouchableOpacity>
-                  <ThemedText style={{ color: colors.primary, fontFamily: colors.fonts.semiBold }}>
-                    Sign In
-                  </ThemedText>
-                </TouchableOpacity>
+              <TouchableOpacity>
+                <ThemedText style={{ color: colors.primary, fontFamily: colors.fonts.semiBold }}>
+                Sign In
+                </ThemedText>
+              </TouchableOpacity>
               </Link>
             </View>
-          </View>
+            </View>
         </View>
       </ScrollView>
     </SafeAreaView>

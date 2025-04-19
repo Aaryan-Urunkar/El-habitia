@@ -7,12 +7,15 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/context/AuthContext';
 
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/components/theme/ThemeProvider';
@@ -32,18 +35,50 @@ export default function LoginScreen() {
     ? ['#8B5CF6', '#EC4899']  // Vibrant gradient for beast mode
     : ['#6366F1', '#3B82F6'];  // Calmer gradient for chill mode
 
-  function handleLogin() {
+  async function handleLogin() {
     if (!email.trim() || !password) {
+      Alert.alert('Login Error', 'Please enter both email and password');
       return;
     }
     
-    // Simulate loading for better UX
     setIsLoading(true);
     
-    // Simple timeout to simulate network request
-    setTimeout(() => {
-      router.replace('/(tabs)/dashboard');
-    }, 800);
+    try {
+      // Make API call to authenticate user
+      const response = await fetch('http://192.168.24.47:5001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Store user token in AsyncStorage
+      if (data.token) {
+        await AsyncStorage.setItem('userToken', data.token);
+        console.log('Authentication token stored successfully');
+        
+        // Navigate to dashboard
+        router.replace('/(tabs)');
+      } else {
+        throw new Error('No authentication token received');
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      Alert.alert('Login Failed', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

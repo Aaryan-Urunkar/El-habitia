@@ -1,34 +1,38 @@
-import { View, Text, StyleSheet } from "react-native"
+import { View, StyleSheet } from "react-native"
+import { ThemedText } from "@/components/ui/ThemedText"
+import { useTheme } from "@/components/theme/ThemeProvider"
 
 export default function SleepMetrics() {
+  const { colors } = useTheme();
+  
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderRadius: 10 }]}>
       <View style={styles.metricItem}>
         <View style={styles.metricValueContainer}>
-          <Text style={styles.metricValue}>6</Text>
-          <Text style={styles.metricUnit}>hr</Text>
+          <ThemedText style={[styles.metricValue, { color: colors.primary }]}>6</ThemedText>
+          <ThemedText style={[styles.metricUnit, { color: colors.subtext }]}>hr</ThemedText>
         </View>
-        <Text style={styles.metricLabel}>short sleep</Text>
+        <ThemedText style={[styles.metricLabel, { color: colors.subtext }]}>short sleep</ThemedText>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       <View style={styles.metricItem}>
         <View style={styles.metricValueContainer}>
-          <Text style={styles.metricValue}>2.2</Text>
-          <Text style={styles.metricUnit}>hr</Text>
+          <ThemedText style={[styles.metricValue, { color: colors.primary }]}>2.2</ThemedText>
+          <ThemedText style={[styles.metricUnit, { color: colors.subtext }]}>hr</ThemedText>
         </View>
-        <Text style={styles.metricLabel}>deep sleep</Text>
+        <ThemedText style={[styles.metricLabel, { color: colors.subtext }]}>deep sleep</ThemedText>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       <View style={styles.metricItem}>
         <View style={styles.metricValueContainer}>
-          <Text style={styles.metricValue}>4</Text>
-          <Text style={styles.metricUnit}>wakes</Text>
+          <ThemedText style={[styles.metricValue, { color: colors.primary }]}>4</ThemedText>
+          <ThemedText style={[styles.metricUnit, { color: colors.subtext }]}>wakes</ThemedText>
         </View>
-        <Text style={styles.metricLabel}>during the night</Text>
+        <ThemedText style={[styles.metricLabel, { color: colors.subtext }]}>during the night</ThemedText>
       </View>
     </View>
   )
@@ -38,8 +42,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "#F5F5F5",
-    borderRadius: 10,
     padding: 10,
   },
   metricItem: {
@@ -51,26 +53,22 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   metricValue: {
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "Nunito-SemiBold",
     fontSize: 18,
-    color: "#9C27B0",
   },
   metricUnit: {
-    fontFamily: "Poppins-Regular",
+    fontFamily: "Nunito-Regular",
     fontSize: 12,
-    color: "#555",
     marginBottom: 2,
     marginLeft: 2,
   },
   metricLabel: {
-    fontFamily: "Poppins-Regular",
+    fontFamily: "Nunito-Regular",
     fontSize: 12,
-    color: "#555",
     marginTop: 5,
   },
   divider: {
     width: 1,
     height: "100%",
-    backgroundColor: "#DDD",
   },
 })

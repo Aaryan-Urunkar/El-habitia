@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { useThemeStore } from '@/store/themeStore';
+import { AuthProvider } from '@/context/AuthContext';
 // Import Firebase configuration
 import '@/firebase/config';
 
@@ -39,16 +40,18 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        </NavThemeProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          </NavThemeProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

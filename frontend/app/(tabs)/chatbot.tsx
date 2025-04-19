@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-
 import { ThemedText } from '@/components/ui/ThemedText';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
@@ -34,26 +33,6 @@ const WELCOME_MESSAGE: Message = {
   timestamp: new Date(),
 };
 
-// Suggested questions
-const SUGGESTIONS = [
-  "How do I build a meditation habit?",
-  "Tips for drinking more water",
-  "How to track my progress better?",
-  "Help me stay motivated"
-];
-
-// Bot responses for demo
-const BOT_RESPONSES: {[key: string]: string} = {
-  "how do i build a meditation habit?": 
-    "Start with just 2 minutes a day. Find a quiet place and focus on your breath. Consistency is more important than duration. Try using the same time and place each day to establish a strong habit cue.",
-  "tips for drinking more water":
-    "1. Keep a water bottle with you at all times. 2. Set reminders on your phone. 3. Replace one sugary drink with water each day. 4. Add flavor with fruit if plain water is boring.",
-  "how to track my progress better?":
-    "Use El-habitia's streak feature to track consecutive days. Also, consider journaling your experience briefly, noting how you feel after completing your habit. Visual progress like charts can be very motivating.",
-  "help me stay motivated":
-    "Try the 'don't break the chain' method - each day you complete your habit, you build momentum. Also, find an accountability partner or join our community to share your journey."
-};
-
 export default function ChatbotScreen() {
   const { colors, scheme } = useTheme();
   const { user } = useAuthStore();
@@ -72,9 +51,9 @@ export default function ChatbotScreen() {
   }, [messages]);
 
   // Handle message sending
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
-    
+
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -82,49 +61,64 @@ export default function ChatbotScreen() {
       sender: 'user',
       timestamp: new Date()
     };
-    
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsTyping(true);
-    
-    // Simulate AI response after a delay
-    setTimeout(() => {
-      const lowerCaseInput = inputText.trim().toLowerCase();
-      
-      // Find matching response or use default
-      let responseText = "I'm not sure about that. Could you try asking something about habit formation or tracking?";
-      
-      // Check for approximate matches
-      for (const key of Object.keys(BOT_RESPONSES)) {
-        if (lowerCaseInput.includes(key) || key.includes(lowerCaseInput)) {
-          responseText = BOT_RESPONSES[key];
-          break;
-        }
+
+    try {
+      // Make API request to FastAPI backend
+      const response = await fetch('https://1719-103-104-226-58.ngrok-free.app/query-schedules/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: "user123", // Replace with actual user ID if available
+          query: inputText.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      
+
+      const data = await response.json();
+
+      // Extract bot response
+      let botResponse = "I'm sorry, I couldn't understand that.";
+      if (data.message) {
+        botResponse = data.message;
+      } else if (data.response) {
+        botResponse = data.response;
+      }
+
+      // Add bot message
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: responseText,
+        text: botResponse,
         sender: 'bot',
         timestamp: new Date()
       };
-      
       setMessages(prev => [...prev, botMessage]);
-      setIsTyping(false);
-    }, 1500);
-  };
+    } catch (error) {
+      console.error("Error fetching bot response:", error);
 
-  // Handle suggestion tap
-  const handleSuggestionTap = (suggestion: string) => {
-    setInputText(suggestion);
-    // Optional: automatically send the suggestion
-    // setTimeout(() => handleSendMessage(), 100);
+      // Add error message from bot
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Oops! Something went wrong. Please try again later.",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   // Render each message
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isUser = item.sender === 'user';
-    
     return (
       <Animated.View
         entering={FadeInUp.delay(index * 50).springify()}
@@ -144,7 +138,6 @@ export default function ChatbotScreen() {
             <IconSymbol name="bubble.left.fill" color="#FFFFFF" size={16} />
           </View>
         )}
-        
         <View style={[
           styles.messageContent,
           isUser ? styles.userMessageContent : styles.botMessageContent
@@ -161,33 +154,6 @@ export default function ChatbotScreen() {
           </ThemedText>
         </View>
       </Animated.View>
-    );
-  };
-
-  // Render suggestions
-  const renderSuggestions = () => {
-    if (messages.length > 1) return null;
-    
-    return (
-      <View style={styles.suggestionsContainer}>
-        <ThemedText variant="subtitle" style={styles.suggestionsTitle}>
-          Try asking:
-        </ThemedText>
-        <View style={styles.suggestions}>
-          {SUGGESTIONS.map((suggestion, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.suggestionChip,
-                { backgroundColor: colors.background, borderColor: colors.border }
-              ]}
-              onPress={() => handleSuggestionTap(suggestion)}
-            >
-              <ThemedText style={styles.suggestionText}>{suggestion}</ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
     );
   };
 
@@ -212,7 +178,6 @@ export default function ChatbotScreen() {
             </View>
           </View>
         </View>
-        
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -228,10 +193,9 @@ export default function ChatbotScreen() {
                 <ActivityIndicator size="small" color={colors.primary} />
                 <ThemedText style={{ marginLeft: 8 }}>Thinking...</ThemedText>
               </View>
-            ) : renderSuggestions()
+            ) : null
           }
         />
-        
         <View style={[
           styles.inputContainer,
           { 
@@ -372,25 +336,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 16,
     marginBottom: 12,
-  },
-  suggestionsContainer: {
-    marginTop: 20,
-  },
-  suggestionsTitle: {
-    marginBottom: 12,
-  },
-  suggestions: {
-    flexWrap: 'wrap',
-    flexDirection: 'row',
-  },
-  suggestionChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    margin: 4,
-  },
-  suggestionText: {
-    fontSize: 14,
   },
 });

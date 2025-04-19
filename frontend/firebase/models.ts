@@ -1,25 +1,41 @@
 export interface User {
-  displayName: string;
+  id: string;
   email: string;
-  avatarUrl?: string;
-  currentMode: 'growth' | 'action';
-  theme?: string;
-  createdAt: Date | number;
-  deviceTokens?: string[];
+  displayName?: string | null;
+  photoURL?: string | null;
+  personality?: Personality;
+  createdAt?: Date;
+  name: string;
+  updatedAt: Date | any;
+  preferences?: {
+    theme: 'light' | 'dark';
+    colorScheme: 'chill' | 'beast';
+  };
+}
+
+export interface Personality {
+  procrastinationResponse?: string;
+  sleepResponse?: string;
+  alcoholSmokingResponse?: string;
 }
 
 export interface Habit {
+  id?: string;
   title: string;
-  description: string;
-  recurrence: 'daily' | 'weekly';
-  ownerId: string; // reference to users collection
-  visibility: 'private' | 'public';
-  createdAt: Date | number;
+  description?: string;
+  ownerId: string;
+  category?: string;
+  isNegative?: boolean;
+  isPublic?: boolean;
+  streak?: number;
+  recurrence?: 'daily' | 'weekly';
+  completed?: boolean;
+  createdAt?: Date | any;
 }
 
 export interface HabitLog {
   completed: boolean;
-  timestamp: Date | number;
+  timestamp: Date | any;
 }
 
 export interface Post {
@@ -74,4 +90,13 @@ export interface AnalyticsEvent {
   eventType: string;
   metadata: Record<string, any>;
   timestamp: Date | number;
+}
+
+export interface Mood {
+  id?: string;
+  userId: string;
+  date: string;
+  mood: 'great' | 'good' | 'okay' | 'bad' | 'awful';
+  note?: string;
+  createdAt: Date | any;
 }
