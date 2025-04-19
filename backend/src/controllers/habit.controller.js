@@ -1,31 +1,34 @@
 import { Habit } from "../models/habit.model.js"
 import { User } from "../models/user.model.js"
 import jwt from "jsonwebtoken"
+
 export const createHabit = async(req, res) => {
 
     //From request, expect token and habit data
 
-    const {token} = req.headers.authorization?.split(' ')[1]
+    const token = req.headers.authorization?.split(" ")[1]
+    
     if (!token) return res.status(401).json({ message: 'Unauthorized' })
     try{
         const payload = jwt.verify(token, process.env.JWT_SECRET)
-        const user = await User.find({_id : payload.userId})
+        const user = await User.findOne({_id : payload.userId})
         if(!user){
             return res.status(500).json({msg : "No user found"})
         }
         const {title , description, isNegative} = req.body
-
+        console.log(user);
+        
         const habit = await Habit.findOne({user: user._id , title})
         if(habit){
             return res.status(400).json({msg : "User already has same habit title"})
         }
-
+        
         const newHabit = await Habit.create({
             user : user._id,
             title,
             description,
-            isNegative, //Expects a boolean value
         })
+        // console.log("In here");
         if(!newHabit){
             return res.status(500).json({msg : "Unable to create new habit"})
         }
@@ -84,6 +87,21 @@ export const getHabit = async(req , res) =>{
             return res.status(400).json({msg : "No title passed"})
         }
         const habit = await Habit.findOne({user: userId , title})
+        return res.status(200).json({msg :"Habit info", habit})
+    }catch(e){
+        res.status(500).json({ message: 'Invalid token OR internal server error' })
+    }
+}
+
+export const getHabitsOfUser = async(req , res) =>{
+    const token = req.headers.authorization?.split(' ')[1]
+    if (!token) return res.status(401).json({ message: 'Unauthorized' })
+    try{
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        const userId = decoded.id
+        
+        const habits = await Habit.find({user: userId })
+        return res.status(200).json({msg : "Here are all habits.", habits})
     }catch(e){
         res.status(500).json({ message: 'Invalid token OR internal server error' })
     }

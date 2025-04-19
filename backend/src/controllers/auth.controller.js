@@ -2,6 +2,7 @@ import cloudinary from "../lib/cloudinary.js"
 import { generateToken } from "../lib/utils.js"
 import {User} from "../models/user.model.js"
 import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
 
 export const signup = async(req , res)=>{
     try{
@@ -58,7 +59,7 @@ export const login = async(req , res) =>{
         if(!isPasswordCorrect){
             return res.status(400).json({message : "Invalid credentials"})
         }
-        console.log("In here");
+        // console.log("In here");
 
         const token = generateToken(user._id , res)
 
@@ -78,7 +79,9 @@ export const login = async(req , res) =>{
 export const addPersonality= async(req , res) =>{
     try{
         const token = req.headers.authorization?.split(' ')[1]
+        
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        console.log("In here");
         const userId = decoded.userId
         const {procrastinationResponse, sleepResponse, alcoholSmokingResponse} = req.body
         if(!procrastinationResponse || !sleepResponse || !alcoholSmokingResponse){
