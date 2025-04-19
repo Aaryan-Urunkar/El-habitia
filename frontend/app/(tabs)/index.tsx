@@ -47,13 +47,6 @@ export default function DashboardScreen() {
     }
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
   const toggleMoodMode = () => {
     const newMode = moodMode === 'growth' ? 'action' : 'growth';
     setMoodMode(newMode);
@@ -75,51 +68,11 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Header Section */}
-        <View style={styles.headerContainer}>
-          {/* Avatar and User Info */}
-          <View style={styles.userSection}>
-            <Image
-              source={user?.photoURL ? { uri: user.photoURL } : require('@/assets/images/default-avatar.jpg')}
-              style={styles.avatar}
-            />
-            <View style={styles.userInfo}>
-              <ThemedText variant="caption">{getGreeting()}</ThemedText>
-              <ThemedText variant="title">{user?.displayName || 'Friend'}</ThemedText>
-            </View>
-          </View>
-
-          {/* Mood Toggle and Progress */}
-          <View style={styles.rightSection}>
-            {/* Mood Toggle Button */}
-            <TouchableOpacity 
-              style={[styles.moodToggle, { backgroundColor: colors.card }]} 
-              onPress={toggleMoodMode}
-            >
-              <ThemedText style={styles.moodIcon}>
-                {moodMode === 'growth' ? '🌿' : '⚡'}
-              </ThemedText>
-              <ThemedText variant="caption" style={styles.moodText}>
-                {moodMode === 'growth' ? 'Growth' : 'Action'}
-              </ThemedText>
-            </TouchableOpacity>
-            
-            {/* Progress Circle or Streak Badge */}
-            {scheme === 'beast' ? (
-              <View style={[styles.streakBadge, { backgroundColor: colors.primary }]}>
-                <IconSymbol name="flame.fill" color="#FFFFFF" size={14} />
-                <ThemedText style={{ color: '#FFFFFF', fontFamily: colors.fonts.bold, fontSize: 14 }}>
-                  15 day streak!
-                </ThemedText>
-              </View>
-            ) : (
-              <View style={[styles.progressCircle, { borderColor: colors.primary }]}>
-                <ThemedText style={{ color: colors.primary, fontFamily: colors.fonts.bold }}>75%</ThemedText>
-              </View>
-            )}
-          </View>
-        </View>
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* The header is now part of the tab navigator */}
         
         {/* Toggle Tabs */}
         <View style={[styles.tabs, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -157,6 +110,19 @@ export default function DashboardScreen() {
             </ThemedText>
           </TouchableOpacity>
         </View>
+        
+        {/* Mood Toggle Button - now as a standalone component */}
+        <TouchableOpacity 
+          style={[styles.moodToggleButton, { backgroundColor: colors.card }]} 
+          onPress={toggleMoodMode}
+        >
+          <ThemedText style={styles.moodIcon}>
+            {moodMode === 'growth' ? '🌿' : '⚡'}
+          </ThemedText>
+          <ThemedText variant="caption" style={styles.moodText}>
+            {moodMode === 'growth' ? 'Switch to Action Mode' : 'Switch to Growth Mode'}
+          </ThemedText>
+        </TouchableOpacity>
         
         {/* Habits List */}
         <View style={styles.habitsContainer}>
@@ -225,65 +191,23 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     gap: 16,
+    // Remove paddingBottom as it's now handled by the tab navigator
   },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  userSection: {
+  moodToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-  },
-  userInfo: {
-    justifyContent: 'center',
-  },
-  rightSection: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  moodToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
     marginBottom: 8,
   },
   moodIcon: {
     fontSize: 16,
-    marginRight: 4,
+    marginRight: 8,
   },
   moodText: {
     fontSize: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  progressCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   tabs: {
     flexDirection: 'row',

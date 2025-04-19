@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet, View, Dimensions, Pressable } from 'react-native';
+import { StyleSheet, View, Dimensions, Pressable, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useEffect, useState } from 'react';
@@ -18,6 +18,9 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Image } from 'react-native';
+import React from 'react';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 const { width } = Dimensions.get('window');
 const TAB_WIDTH = width / 5;
@@ -26,13 +29,30 @@ const TAB_WIDTH = width / 5;
 const TAB_BAR_HEIGHT = 65; // Fixed height for the tab bar
 
 export default function TabsLayout() {
-  const { colors, scheme } = useTheme();
+  const { colors, scheme, mode } = useTheme();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useThemeStore();
   
   // Check authentication state here if needed
   const navigationState = useRootNavigationState();
   const { user } = useAuthStore();
+  
+  // Header gradient colors based on theme
+  const getHeaderGradientColors = (): [string, string, ...string[]] => {
+    if (mode === 'dark') {
+      return colorScheme === 'beast' 
+        ? ['#27272A', '#18181B'] 
+        : ['#0a2638', '#051824'];
+    } else {
+      return colorScheme === 'beast' 
+        ? ['#FFFBEB', '#FFF8E6'] 
+        : ['#f1f9fe', '#e6f4fd'];
+    }
+  };
+
+  const handleProfilePress = () => {
+    router.push('../settings');
+  };
   
   useEffect(() => {
     if (!navigationState?.key) return;
@@ -44,80 +64,190 @@ export default function TabsLayout() {
   }, [navigationState?.key, user]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.subtext,
-          tabBarStyle: {
-            display: 'none', // Hide default tab bar as we're using custom implementation
-          },
-          headerShown: true, // Ensure headers are visible
-          headerStyle: {
-            backgroundColor: colors.card,
-          },
-          headerTitleStyle: {
-            fontFamily: colors.fonts.semiBold,
-            fontSize: 18,
-            color: colors.text,
-          },
-        }}
-        tabBar={props => <FloatingTabBar {...props} />}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Dashboard',
-            tabBarIcon: ({ color, size, focused }) => (
-              <IconSymbol name={focused ? "house.fill" : "house"} color={color} size={size} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="mood-tracker"
-          options={{
-            title: 'Mood',
-            tabBarIcon: ({ color, size, focused }) => (
-              <IconSymbol name={focused ? "heart.fill" : "heart"} color={color} size={size} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="add-habit"
-          options={{
-            title: 'Add',
-            tabBarIcon: ({ color, size }) => (
-              <IconSymbol name="plus.circle.fill" color="#FFF" size={size + 6} />
-            ),
-          }}
-          listeners={{
-            tabPress: e => {
-              // Optional: prevent default navigation and implement a modal
-              // e.preventDefault();
-              // router.push('/add-habit-modal');
+    <ProtectedRoute>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Tabs
+          screenOptions={{
+            tabBarActiveTintColor: colors.primary,
+            tabBarInactiveTintColor: colors.subtext,
+            headerShown: false, // Hide the default header as we're using custom header
+            headerStyle: {
+              backgroundColor: colors.card,
             },
+            headerTitleStyle: {
+              fontFamily: colors.fonts.semiBold,
+              fontSize: 18,
+              color: colors.text,
+            },
+            // Add bottom padding to ensure content isn't hidden behind the tab bar
+            tabBarStyle: {
+              display: 'none', // Hide default tab bar as we're using custom implementation
+              paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 20,
+            }
           }}
-        />
-        <Tabs.Screen
-          name="chatbot"
-          options={{
-            title: 'Chatbot',
-            tabBarIcon: ({ color, size, focused }) => (
-              <IconSymbol name={focused ? "bubble.fill" : "bubble"} color={color} size={size} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="community"
-          options={{
-            title: 'Community',
-            tabBarIcon: ({ color, size, focused }) => (
-              <IconSymbol name={focused ? "person.3.fill" : "person.3"} color={color} size={size} />
-            ),
-          }}
-        />
-      </Tabs>
-    </GestureHandlerRootView>
+          tabBar={props => <FloatingTabBar {...props} />}
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Dashboard',
+              tabBarIcon: ({ color, size, focused }) => (
+                <IconSymbol name={focused ? "house.fill" : "house"} color={color} size={size} />
+              ),
+              // Custom header for Dashboard
+              header: () => (
+                <CustomHeader 
+                  title="Dashboard" 
+                  gradientColors={getHeaderGradientColors()}
+                  onProfilePress={handleProfilePress}
+                />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="mood-tracker"
+            options={{
+              title: 'Mood',
+              tabBarIcon: ({ color, size, focused }) => (
+                <IconSymbol name={focused ? "heart.fill" : "heart"} color={color} size={size} />
+              ),
+              // Custom header for Mood Tracker
+              header: () => (
+                <CustomHeader 
+                  title="Mood Tracker" 
+                  gradientColors={getHeaderGradientColors()}
+                  onProfilePress={handleProfilePress}
+                />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="add-habit"
+            options={{
+              title: 'Add',
+              tabBarIcon: ({ color, size }) => (
+                <IconSymbol name="plus.circle.fill" color="#FFF" size={size + 6} />
+              ),
+              // Custom header for Add Habit
+              header: () => (
+                <CustomHeader 
+                  title="Add Habit" 
+                  gradientColors={getHeaderGradientColors()}
+                  onProfilePress={handleProfilePress}
+                />
+              ),
+            }}
+            listeners={{
+              tabPress: e => {
+                // Optional: prevent default navigation and implement a modal
+                // e.preventDefault();
+                // router.push('/add-habit-modal');
+              },
+            }}
+          />
+          <Tabs.Screen
+            name="chatbot"
+            options={{
+              title: 'Chatbot',
+              tabBarIcon: ({ color, size, focused }) => (
+                <IconSymbol name={focused ? "bubble.fill" : "bubble"} color={color} size={size} />
+              ),
+              // Custom header for Chatbot
+              header: () => (
+                <CustomHeader 
+                  title="AI Assistant" 
+                  gradientColors={getHeaderGradientColors()}
+                  onProfilePress={handleProfilePress}
+                />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="community"
+            options={{
+              title: 'Community',
+              tabBarIcon: ({ color, size, focused }) => (
+                <IconSymbol name={focused ? "person.3.fill" : "person.3"} color={color} size={size} />
+              ),
+              // Custom header for Community
+              header: () => (
+                <CustomHeader 
+                  title="Community" 
+                  gradientColors={getHeaderGradientColors()}
+                  onProfilePress={handleProfilePress}
+                />
+              ),
+            }}
+          />
+        </Tabs>
+      </GestureHandlerRootView>
+    </ProtectedRoute>
+  );
+}
+
+// Custom Header component with gradient background and profile button
+function CustomHeader({ 
+  title, 
+  gradientColors, 
+  onProfilePress 
+}: { 
+  title: string; 
+  gradientColors: string[]; 
+  onProfilePress: () => void;
+}) {
+  const { colors, mode } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+  
+  // Animation for header appearance
+  const opacity = useSharedValue(0);
+  
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 400 });
+  }, []);
+  
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value
+    };
+  });
+
+  return (
+    <Animated.View style={[
+      styles.headerContainer,
+      { paddingTop: insets.top },
+      animatedStyle
+    ]}>
+      <LinearGradient
+        colors={gradientColors}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <ThemedText 
+              style={[
+                styles.headerTitle,
+                { color: colors.text, fontFamily: colors.fonts.bold }
+              ]}
+            >
+              {title}
+            </ThemedText>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.profileButton, { backgroundColor: colors.card }]} 
+            onPress={onProfilePress}
+          >
+            <Image
+              source={user?.photoURL ? { uri: user.photoURL } : require('@/assets/images/default-avatar.jpg')}
+              style={styles.profileImage}
+            />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
@@ -158,7 +288,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   }, [state.index, prevIndex, tabPositions]);
   
   // Generate gradient colors based on theme
-  const gradientColors: [string, string] = colorScheme === 'beast' 
+  const gradientColors: [string, string, ...string[]] = colorScheme === 'beast' 
     ? ['#8B5CF6', '#EC4899'] // Vibrant gradient for beast mode
     : ['#6366F1', '#3B82F6']; // Calmer gradient for chill mode
 
@@ -425,5 +555,47 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     opacity: 0.5,
+  },
+  headerContainer: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  headerGradient: {
+    width: '100%',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 22,
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
 });

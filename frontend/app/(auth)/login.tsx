@@ -13,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/context/AuthContext';
 
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/components/theme/ThemeProvider';
@@ -32,18 +34,25 @@ export default function LoginScreen() {
     ? ['#8B5CF6', '#EC4899']  // Vibrant gradient for beast mode
     : ['#6366F1', '#3B82F6'];  // Calmer gradient for chill mode
 
-  function handleLogin() {
+  async function handleLogin() {
     if (!email.trim() || !password) {
       return;
     }
     
-    // Simulate loading for better UX
     setIsLoading(true);
     
-    // Simple timeout to simulate network request
-    setTimeout(() => {
-      router.replace('/(tabs)/dashboard');
-    }, 800);
+    try {
+      // Here you would typically make an API call to authenticate
+      // For demo purposes, we'll just store a dummy token
+      await AsyncStorage.setItem('userToken', 'demo-token');
+      
+      // Navigate to dashboard
+      router.navigate('../(tabs)/index');
+    } catch (error) {
+      console.error('Login failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
