@@ -1,6 +1,9 @@
 // Firebase configuration
 export * from './config';
 
+// Authentication
+export * from './auth';
+
 // Firestore models and types
 export * from './models';
 
