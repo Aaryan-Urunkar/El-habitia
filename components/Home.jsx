@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
 import { View, Text, Image, StyleSheet, ImageBackground, TextInput, Button } from 'react-native';
 import { useFonts } from 'expo-font';
 import Bg from "@/assets/images/landing_bg.jpeg"
@@ -8,9 +7,6 @@ import Bg from "@/assets/images/landing_bg.jpeg"
 import Bitter from "@/assets/fonts/Bitter-Italic-VariableFont_wght.ttf";
 
 const Home = () => {
-
-  const router = useRouter()
-
   const [fontsLoaded] = useFonts({
     Bitter: Bitter,
   });
@@ -31,7 +27,7 @@ const Home = () => {
             <Text style={styles.text2}>
               Every day counts. Even the ones you can't name yet.
             </Text>
-            <Button title='Start Now' color={"black"} onPress={() => router.navigate("../(auth)/login")}>
+            <Button title='Start Now' color={"black"} onPress={() => {}} style={styles.submit_btn}>
             </Button>
 
           </View>
@@ -48,7 +44,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
   },
   text: {
     textAlign: "center",
@@ -63,14 +59,13 @@ const styles = StyleSheet.create({
   },
   input_box : {
     backgroundColor:"black",
-    height:300,
-    width:375,
-    opacity:0.9,
+    height:250,
+    width:300,
+    opacity:0.6,
     borderRadius:10,
     marginTop:200,
     flexDirection:"column",
-    justifyContent:"space-around",
-    alignItems:"center"
+    justifyContent:"space-around"
   },
   input: {
     height: 40,
@@ -83,8 +78,7 @@ const styles = StyleSheet.create({
     fontFamily:"Poppins",
     fontSize:16,
     textAlign:"center",
-    color:"white",
-    width:"70%"
+    color:"white"
   },
   submit_btn : {
     width:"60%",
