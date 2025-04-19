@@ -1,485 +1,484 @@
-import { useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image, Switch, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
-import { useThemeStore } from '@/store/themeStore';
+import { Stack, router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 
-// Mock leaderboard data
-const LEADERBOARD_DATA = [
-  { id: '1', name: 'Sarah J.', streak: 42, points: 1250, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100' },
-  { id: '2', name: 'Mike T.', streak: 36, points: 980, avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=100' },
-  { id: '3', name: 'Alex R.', streak: 28, points: 820, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100' },
-  { id: '4', name: 'You', streak: 15, points: 650, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=100', isCurrentUser: true },
-  { id: '5', name: 'Taylor J.', streak: 10, points: 420, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=100' },
-];
+enum SettingsTab {
+  Profile = 'profile',
+  Leaderboard = 'leaderboard',
+  Settings = 'settings'
+}
 
 export default function SettingsScreen() {
-  const { colors, mode, scheme, toggleMode, toggleColorScheme } = useTheme();
-  const { setMode, setColorScheme } = useThemeStore();
-  const { user } = useAuthStore();
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(mode === 'dark');
-  const [beastMode, setBeastMode] = useState(scheme === 'beast');
+  const { colors, mode } = useTheme();
+  const { user, logout } = useAuthStore();
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<SettingsTab>(SettingsTab.Profile);
 
-  // Handle dark mode toggle
-  const handleDarkModeToggle = () => {
-    setDarkMode(!darkMode);
-    setMode(darkMode ? 'light' : 'dark');
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Logout", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear all data from AsyncStorage
+              await AsyncStorage.clear();
+              // Call the logout function from auth store
+              logout();
+              // Navigate back to login screen
+              router.replace('/(auth)/login');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Logout Failed', 'An error occurred while logging out.');
+            }
+          }
+        }
+      ]
+    );
   };
 
-  // Handle color scheme toggle
-  const handleColorSchemeToggle = () => {
-    setBeastMode(!beastMode);
-    setColorScheme(beastMode ? 'chill' : 'beast');
+  const handleBackPress = () => {
+    router.back();
   };
 
-  // Header gradient colors based on theme
-  const getHeaderGradientColors = (): [string, string] => {
-    if (mode === 'dark') {
-      return scheme === 'beast' 
-        ? ['#8B5CF6', '#EC4899'] // Vibrant gradient for beast mode (dark)
-        : ['#5d9fd8', '#3a8bc9']; // Calm gradient for chill mode (dark)
-    } else {
-      return scheme === 'beast' 
-        ? ['#DC2626', '#F59E0B'] // Vibrant gradient for beast mode (light)
-        : ['#6366F1', '#3B82F6']; // Calm gradient for chill mode (light)
+  // Render the active tab content
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case SettingsTab.Profile:
+        return (
+          <Animated.View entering={FadeInRight.delay(100)} style={styles.tabContent}>
+            <View style={styles.profileHeader}>
+              <View style={[styles.avatarContainer, { backgroundColor: colors.card }]}>
+                <Image
+                  source={user?.photoURL ? { uri: user.photoURL } : require('@/assets/images/default-avatar.jpg')}
+                  style={styles.profileImage}
+                />
+              </View>
+              <ThemedText style={[styles.userName, { fontFamily: colors.fonts.bold }]}>
+                {user?.displayName || 'User'}
+              </ThemedText>
+              <ThemedText style={[styles.userEmail, { color: colors.subtext, fontFamily: colors.fonts.regular }]}>
+                {user?.email || 'No email provided'}
+              </ThemedText>
+            </View>
+
+            <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <ThemedText style={[styles.sectionTitle, { fontFamily: colors.fonts.semiBold }]}>Stats</ThemedText>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <ThemedText style={[styles.statValue, { fontFamily: colors.fonts.bold }]}>42</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.subtext }]}>Habits</ThemedText>
+                </View>
+                <View style={styles.statItem}>
+                  <ThemedText style={[styles.statValue, { fontFamily: colors.fonts.bold }]}>87%</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.subtext }]}>Completion</ThemedText>
+                </View>
+                <View style={styles.statItem}>
+                  <ThemedText style={[styles.statValue, { fontFamily: colors.fonts.bold }]}>28</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.subtext }]}>Day Streak</ThemedText>
+                </View>
+              </View>
+            </View>
+
+            <View style={[styles.achievementsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <ThemedText style={[styles.sectionTitle, { fontFamily: colors.fonts.semiBold }]}>Achievements</ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.achievementScroll}>
+                {[1, 2, 3, 4, 5].map((item) => (
+                  <View 
+                    key={item} 
+                    style={[styles.achievementBadge, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  >
+                    <IconSymbol name="trophy.fill" color={colors.primary} size={24} />
+                    <ThemedText style={[styles.achievementText, { fontFamily: colors.fonts.medium }]}>
+                      {`Trophy ${item}`}
+                    </ThemedText>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          </Animated.View>
+        );
+      
+      case SettingsTab.Leaderboard:
+        return (
+          <Animated.View entering={FadeInRight.delay(100)} style={styles.tabContent}>
+            <View style={[styles.leaderboardContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <ThemedText style={[styles.sectionTitle, { fontFamily: colors.fonts.semiBold }]}>Global Leaderboard</ThemedText>
+              
+              {/* Leaderboard entries */}
+              {[1, 2, 3, 4, 5].map((rank) => (
+                <View 
+                  key={rank}
+                  style={[
+                    styles.leaderboardItem,
+                    { borderBottomColor: colors.border }
+                  ]}
+                >
+                  <View style={styles.rankContainer}>
+                    <ThemedText style={[styles.rankNumber, { fontFamily: colors.fonts.bold }]}>{rank}</ThemedText>
+                  </View>
+                  
+                  <View style={styles.leaderUserInfo}>
+                    <Image
+                      source={require('@/assets/images/default-avatar.jpg')}
+                      style={styles.leaderAvatar}
+                    />
+                    <ThemedText style={[styles.leaderName, { fontFamily: colors.fonts.medium }]}>
+                      {rank === 3 && user?.displayName ? user.displayName : `User ${rank}`}
+                    </ThemedText>
+                  </View>
+                  
+                  <ThemedText style={[styles.leaderScore, { fontFamily: colors.fonts.bold }]}>
+                    {1000 - (rank * 50)} pts
+                  </ThemedText>
+                </View>
+              ))}
+              
+              <TouchableOpacity 
+                style={[styles.viewMoreButton, { borderColor: colors.border }]}
+              >
+                <ThemedText style={{ fontFamily: colors.fonts.medium }}>View Full Leaderboard</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        );
+      
+      case SettingsTab.Settings:
+        return (
+          <Animated.View entering={FadeInRight.delay(100)} style={styles.tabContent}>
+            <View style={[styles.settingsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <ThemedText style={[styles.sectionTitle, { fontFamily: colors.fonts.semiBold }]}>Account Settings</ThemedText>
+              
+              <TouchableOpacity 
+                style={[styles.settingsItem, { borderBottomColor: colors.border }]}
+              >
+                <IconSymbol name="person" color={colors.text} size={20} />
+                <ThemedText style={[styles.settingsItemText, { fontFamily: colors.fonts.medium }]}>
+                  Edit Profile
+                </ThemedText>
+                <IconSymbol name="chevron.right" color={colors.subtext} size={16} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.settingsItem, { borderBottomColor: colors.border }]}
+              >
+                <IconSymbol name="bell" color={colors.text} size={20} />
+                <ThemedText style={[styles.settingsItemText, { fontFamily: colors.fonts.medium }]}>
+                  Notifications
+                </ThemedText>
+                <IconSymbol name="chevron.right" color={colors.subtext} size={16} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.settingsItem, { borderBottomColor: colors.border }]}
+              >
+                <IconSymbol name="lock" color={colors.text} size={20} />
+                <ThemedText style={[styles.settingsItemText, { fontFamily: colors.fonts.medium }]}>
+                  Privacy & Security
+                </ThemedText>
+                <IconSymbol name="chevron.right" color={colors.subtext} size={16} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.settingsItem, { borderBottomColor: colors.border }]}
+              >
+                <IconSymbol name="paintbrush" color={colors.text} size={20} />
+                <ThemedText style={[styles.settingsItemText, { fontFamily: colors.fonts.medium }]}>
+                  Appearance
+                </ThemedText>
+                <IconSymbol name="chevron.right" color={colors.subtext} size={16} />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.logoutButton, { borderColor: colors.error }]}
+                onPress={handleLogout}
+              >
+                <IconSymbol name="arrow.right.square" color={colors.error} size={20} />
+                <ThemedText style={[styles.logoutButtonText, { color: colors.error, fontFamily: colors.fonts.medium }]}>
+                  Logout
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        );
+      
+      default:
+        return null;
     }
   };
 
-  return (
-    <>
-      <Stack.Screen 
-        options={{
-          headerShown: false
-        }}
+  // Create tab switch buttons
+  const TabButton = ({ tab, title, icon }: { tab: SettingsTab, title: string, icon: string }) => (
+    <TouchableOpacity
+      style={[
+        styles.tabButton,
+        activeTab === tab && [styles.activeTabButton, { borderBottomColor: colors.primary }]
+      ]}
+      onPress={() => setActiveTab(tab)}
+    >
+      <IconSymbol 
+        name={icon} 
+        color={activeTab === tab ? colors.primary : colors.subtext} 
+        size={18} 
       />
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={styles.container}>
-          {/* Custom Header with Back Button */}
-          <View style={styles.headerContainer}>
-            <LinearGradient
-              colors={getHeaderGradientColors()}
-              style={styles.headerGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <TouchableOpacity 
-                style={styles.backButton} 
-                onPress={() => router.back()}
-              >
-                <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-              <ThemedText style={styles.headerTitle}>Settings & Profile</ThemedText>
-            </LinearGradient>
-          </View>
-          
-          {/* Profile Card */}
-          <Animated.View 
-            entering={FadeInDown.delay(200).springify().damping(12)}
-            style={[styles.profileCard, { backgroundColor: colors.card }]}
-          >
-            <View style={styles.profileHeader}>
-              <Image
-                source={user?.photoURL ? { uri: user.photoURL } : require('@/assets/images/default-avatar.jpg')}
-                style={styles.profileImage}
-              />
-              <View style={styles.profileInfo}>
-                <ThemedText variant="subtitle">
-                  {user?.displayName || 'User'}
-                </ThemedText>
-                <View style={styles.streakContainer}>
-                  <IconSymbol 
-                    name={scheme === 'beast' ? "flame.fill" : "sparkles"} 
-                    size={14} 
-                    color={colors.primary} 
-                  />
-                  <ThemedText 
-                    variant="caption" 
-                    style={{ color: colors.primary, fontFamily: colors.fonts.semiBold }}
-                  >
-                    15 day streak
-                  </ThemedText>
-                </View>
-              </View>
-              <TouchableOpacity style={[styles.editButton, { borderColor: colors.border }]}>
-                <IconSymbol name="pencil" size={16} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <ThemedText variant="title" style={{ color: colors.primary }}>87</ThemedText>
-                <ThemedText variant="caption" style={{ color: colors.subtext }}>Total Tasks</ThemedText>
-              </View>
-              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.statItem}>
-                <ThemedText variant="title" style={{ color: colors.primary }}>15</ThemedText>
-                <ThemedText variant="caption" style={{ color: colors.subtext }}>Streak Days</ThemedText>
-              </View>
-              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.statItem}>
-                <ThemedText variant="title" style={{ color: colors.primary }}>4</ThemedText>
-                <ThemedText variant="caption" style={{ color: colors.subtext }}>Current Habits</ThemedText>
-              </View>
-            </View>
-          </Animated.View>
-          
-          {/* Leaderboard Section */}
-          <Animated.View 
-            entering={FadeInDown.delay(300).springify().damping(12)}
-          >
-            <View style={styles.sectionHeader}>
-              <ThemedText variant="subtitle">Leaderboard</ThemedText>
-              <TouchableOpacity>
-                <ThemedText style={{ color: colors.primary }}>See All</ThemedText>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={[styles.leaderboardCard, { backgroundColor: colors.card }]}>
-              {LEADERBOARD_DATA.map((user, index) => (
-                <View 
-                  key={user.id}
-                  style={[
-                    styles.leaderboardItem, 
-                    index < LEADERBOARD_DATA.length - 1 && { 
-                      borderBottomWidth: 1, 
-                      borderBottomColor: colors.border 
-                    },
-                    user.isCurrentUser && { 
-                      backgroundColor: colors.primary + '10'
-                    }
-                  ]}
-                >
-                  <ThemedText variant="caption" style={styles.rankNumber}>{index + 1}</ThemedText>
-                  <Image source={{ uri: user.avatar }} style={styles.userAvatar} />
-                  <View style={styles.userInfo}>
-                    <ThemedText style={user.isCurrentUser ? { fontFamily: colors.fonts.bold } : {}}>
-                      {user.name}
-                    </ThemedText>
-                    <View style={styles.userStats}>
-                      <IconSymbol 
-                        name={scheme === 'beast' ? "flame.fill" : "sparkles"} 
-                        size={12} 
-                        color={colors.primary} 
-                      />
-                      <ThemedText 
-                        variant="caption" 
-                        style={{ color: colors.subtext, marginRight: 8 }}
-                      >
-                        {user.streak} day streak
-                      </ThemedText>
-                      <IconSymbol name="star.fill" size={12} color={colors.primary} />
-                      <ThemedText variant="caption" style={{ color: colors.subtext }}>
-                        {user.points} points
-                      </ThemedText>
-                    </View>
-                  </View>
-                  {index < 3 && (
-                    <View 
-                      style={[
-                        styles.medal, 
-                        { backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' }
-                      ]}
-                    >
-                      <ThemedText style={styles.medalText}>{index + 1}</ThemedText>
-                    </View>
-                  )}
-                </View>
-              ))}
-            </View>
-          </Animated.View>
-          
-          {/* Settings Section */}
-          <Animated.View 
-            entering={FadeInDown.delay(400).springify().damping(12)}
-          >
-            <View style={styles.sectionHeader}>
-              <ThemedText variant="subtitle">Settings</ThemedText>
-            </View>
-            
-            <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-              {/* Dark Mode Toggle */}
-              <View style={styles.settingItem}>
-                <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: colors.primary + '20' }]}>
-                    <IconSymbol 
-                      name={darkMode ? "moon.fill" : "sun.max.fill"} 
-                      size={16} 
-                      color={colors.primary} 
-                    />
-                  </View>
-                  <ThemedText>Dark Mode</ThemedText>
-                </View>
-                <Switch
-                  value={darkMode}
-                  onValueChange={handleDarkModeToggle}
-                  trackColor={{ false: '#767577', true: colors.primary }}
-                  thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : darkMode ? colors.primary : '#f4f3f4'}
-                />
-              </View>
-              
-              {/* Beast Mode Toggle */}
-              <View style={[styles.settingItem, { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: colors.primary + '20' }]}>
-                    <IconSymbol 
-                      name={beastMode ? "flame.fill" : "leaf.fill"} 
-                      size={16} 
-                      color={colors.primary} 
-                    />
-                  </View>
-                  <View>
-                    <ThemedText>{beastMode ? 'Beast Mode' : 'Chill Mode'}</ThemedText>
-                    <ThemedText variant="caption" style={{ color: colors.subtext }}>
-                      {beastMode 
-                        ? 'High intensity theme for action' 
-                        : 'Relaxed theme for mindfulness'
-                      }
-                    </ThemedText>
-                  </View>
-                </View>
-                <Switch
-                  value={beastMode}
-                  onValueChange={handleColorSchemeToggle}
-                  trackColor={{ false: '#767577', true: colors.primary }}
-                  thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : beastMode ? colors.primary : '#f4f3f4'}
-                />
-              </View>
-              
-              {/* Notifications Toggle */}
-              <View style={[styles.settingItem, { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: colors.primary + '20' }]}>
-                    <IconSymbol 
-                      name={notifications ? "bell.fill" : "bell"} 
-                      size={16} 
-                      color={colors.primary} 
-                    />
-                  </View>
-                  <ThemedText>Notifications</ThemedText>
-                </View>
-                <Switch
-                  value={notifications}
-                  onValueChange={setNotifications}
-                  trackColor={{ false: '#767577', true: colors.primary }}
-                  thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : notifications ? colors.primary : '#f4f3f4'}
-                />
-              </View>
-            </View>
-            
-            {/* Log Out Button */}
-            <TouchableOpacity 
-              style={[styles.logoutButton, { backgroundColor: colors.error }]}
-              onPress={() => router.replace('/(auth)/landing')}
-            >
-              <IconSymbol name="lock" size={18} color="#FFFFFF" />
-              <ThemedText style={styles.logoutText}>Log Out</ThemedText>
-            </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
+      <ThemedText 
+        style={[
+          styles.tabButtonText,
+          { 
+            color: activeTab === tab ? colors.primary : colors.subtext,
+            fontFamily: activeTab === tab ? colors.fonts.semiBold : colors.fonts.medium
+          }
+        ]}
+      >
+        {title}
+      </ThemedText>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      {/* Custom Header */}
+      <LinearGradient
+        colors={mode === 'dark' ? ['#27272A', '#18181B'] : ['#FFFBEB', '#FFF8E6']}
+        style={[styles.header, { paddingTop: insets.top + 10 }]}
+      >
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <IconSymbol name="arrow.left" color={colors.text} size={24} />
+        </TouchableOpacity>
+        <ThemedText style={[styles.headerTitle, { fontFamily: colors.fonts.bold }]}>
+          Settings
+        </ThemedText>
+        <View style={styles.headerRight} />
+      </LinearGradient>
+      
+      {/* Tab Navigation */}
+      <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+        <TabButton tab={SettingsTab.Profile} title="Profile" icon="person.fill" />
+        <TabButton tab={SettingsTab.Leaderboard} title="Leaderboard" icon="trophy.fill" />
+        <TabButton tab={SettingsTab.Settings} title="Settings" icon="gear" />
+      </View>
+      
+      {/* Content Area */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {renderTabContent()}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 40,
-  },
-  headerContainer: {
-    overflow: 'hidden',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 20,
-  },
-  headerGradient: {
-    paddingTop: 20,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileCard: {
-    margin: 16,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginRight: 16,
-  },
-  profileInfo: {
     flex: 1,
   },
-  streakContainer: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    gap: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 15,
   },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerTitle: {
+    fontSize: 20,
   },
-  divider: {
-    height: 1,
-    marginVertical: 16,
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
   },
-  statsRow: {
+  headerRight: {
+    width: 40,
+  },
+  tabBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+  },
+  tabButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTabButton: {
+    borderBottomWidth: 2,
+  },
+  tabButtonText: {
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  tabContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  profileHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  userName: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+  },
+  statsContainer: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    marginBottom: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   statItem: {
     alignItems: 'center',
+    flex: 1,
   },
-  statDivider: {
-    width: 1,
-    height: '100%',
+  statValue: {
+    fontSize: 24,
+    marginBottom: 4,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
+  statLabel: {
+    fontSize: 12,
   },
-  leaderboardCard: {
-    marginHorizontal: 16,
+  achievementsContainer: {
     borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+  },
+  achievementScroll: {
+    flexDirection: 'row',
+  },
+  achievementBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 12,
+    width: 90,
+    height: 90,
+    borderWidth: 1,
+  },
+  achievementText: {
+    fontSize: 12,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  leaderboardContainer: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
   },
   leaderboardItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  rankContainer: {
+    width: 30,
+    alignItems: 'center',
   },
   rankNumber: {
-    width: 20,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    marginRight: 12,
+    fontSize: 18,
   },
-  userAvatar: {
+  leaderUserInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  leaderAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 12,
   },
-  userInfo: {
-    flex: 1,
+  leaderName: {
+    marginLeft: 10,
+    fontSize: 16,
   },
-  userStats: {
-    flexDirection: 'row',
+  leaderScore: {
+    fontSize: 16,
+  },
+  viewMoreButton: {
     alignItems: 'center',
-    marginTop: 4,
+    paddingVertical: 12,
+    marginTop: 10,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  medal: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  medalText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  settingsCard: {
-    marginHorizontal: 16,
+  settingsContainer: {
     borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
   },
-  settingItem: {
+  settingsItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 16,
+    borderBottomWidth: 1,
   },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  settingIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+  settingsItemText: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: 16,
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  logoutText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  logoutButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
   },
 });

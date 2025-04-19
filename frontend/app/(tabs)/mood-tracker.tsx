@@ -7,6 +7,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import  HeaderBar from '@/components/HeaderBar';
+import { useThemeStore } from '@/store/themeStore';
 
 // Mock data for mood history
 const MOCK_MOOD_DATA = [
@@ -44,12 +46,13 @@ function MoodCategoryButton({ icon, label, onPress }: { icon: string; label: str
 }
 
 export default function MoodTrackerScreen() {
-  const { colors, scheme } = useTheme();
+  const { colors, scheme, mode } = useTheme();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [moodNote, setMoodNote] = useState('');
   const [moodData, setMoodData] = useState(MOCK_MOOD_DATA);
   const [activeView, setActiveView] = useState<'today' | 'history'>('today');
-  
+  const { colorScheme } = useThemeStore();
+
   // Get current date formatted
   const getCurrentDate = () => {
     const today = new Date();
@@ -92,6 +95,18 @@ export default function MoodTrackerScreen() {
   
   const stats = getMoodStats();
   
+  const getHeaderGradientColors = (): [string, string, ...string[]] => {
+    if (mode === 'dark') {
+      return colorScheme === 'beast' 
+        ? ['#27272A', '#18181B'] 
+        : ['#0a2638', '#051824'];
+    } else {
+      return colorScheme === 'beast' 
+        ? ['#FFFBEB', '#FFF8E6'] 
+        : ['#f1f9fe', '#e6f4fd'];
+    }
+  };
+
   // Handle mood selection and submission
   const handleMoodSubmit = () => {
     if (!selectedMood) return;
@@ -137,6 +152,10 @@ export default function MoodTrackerScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            <HeaderBar
+              title="Mood Tracker" 
+              gradientColors={getHeaderGradientColors()}
+            />
       <View style={styles.container}>
         {/* Header Tabs */}
         <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>

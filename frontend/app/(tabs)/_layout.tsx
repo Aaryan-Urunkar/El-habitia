@@ -21,6 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Image } from 'react-native';
 import React from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import HeaderBar from '@/components/HeaderBar';
 
 const { width } = Dimensions.get('window');
 const TAB_WIDTH = width / 5;
@@ -48,10 +49,6 @@ export default function TabsLayout() {
         ? ['#FFFBEB', '#FFF8E6'] 
         : ['#f1f9fe', '#e6f4fd'];
     }
-  };
-
-  const handleProfilePress = () => {
-    router.push('../settings');
   };
   
   useEffect(() => {
@@ -96,10 +93,9 @@ export default function TabsLayout() {
               ),
               // Custom header for Dashboard
               header: () => (
-                <CustomHeader 
+                <HeaderBar
                   title="Dashboard" 
                   gradientColors={getHeaderGradientColors()}
-                  onProfilePress={handleProfilePress}
                 />
               ),
             }}
@@ -113,10 +109,9 @@ export default function TabsLayout() {
               ),
               // Custom header for Mood Tracker
               header: () => (
-                <CustomHeader 
+                <HeaderBar
                   title="Mood Tracker" 
                   gradientColors={getHeaderGradientColors()}
-                  onProfilePress={handleProfilePress}
                 />
               ),
             }}
@@ -130,10 +125,9 @@ export default function TabsLayout() {
               ),
               // Custom header for Add Habit
               header: () => (
-                <CustomHeader 
+                <HeaderBar
                   title="Add Habit" 
                   gradientColors={getHeaderGradientColors()}
-                  onProfilePress={handleProfilePress}
                 />
               ),
             }}
@@ -154,10 +148,9 @@ export default function TabsLayout() {
               ),
               // Custom header for Chatbot
               header: () => (
-                <CustomHeader 
+                <HeaderBar
                   title="AI Assistant" 
                   gradientColors={getHeaderGradientColors()}
-                  onProfilePress={handleProfilePress}
                 />
               ),
             }}
@@ -171,10 +164,9 @@ export default function TabsLayout() {
               ),
               // Custom header for Community
               header: () => (
-                <CustomHeader 
+                <HeaderBar
                   title="Community" 
                   gradientColors={getHeaderGradientColors()}
-                  onProfilePress={handleProfilePress}
                 />
               ),
             }}
@@ -182,72 +174,6 @@ export default function TabsLayout() {
         </Tabs>
       </GestureHandlerRootView>
     </ProtectedRoute>
-  );
-}
-
-// Custom Header component with gradient background and profile button
-function CustomHeader({ 
-  title, 
-  gradientColors, 
-  onProfilePress 
-}: { 
-  title: string; 
-  gradientColors: string[]; 
-  onProfilePress: () => void;
-}) {
-  const { colors, mode } = useTheme();
-  const insets = useSafeAreaInsets();
-  const { user } = useAuthStore();
-  
-  // Animation for header appearance
-  const opacity = useSharedValue(0);
-  
-  useEffect(() => {
-    opacity.value = withTiming(1, { duration: 400 });
-  }, []);
-  
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value
-    };
-  });
-
-  return (
-    <Animated.View style={[
-      styles.headerContainer,
-      { paddingTop: insets.top },
-      animatedStyle
-    ]}>
-      <LinearGradient
-        colors={gradientColors}
-        style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <ThemedText 
-              style={[
-                styles.headerTitle,
-                { color: colors.text, fontFamily: colors.fonts.bold }
-              ]}
-            >
-              {title}
-            </ThemedText>
-          </View>
-          
-          <TouchableOpacity 
-            style={[styles.profileButton, { backgroundColor: colors.card }]} 
-            onPress={onProfilePress}
-          >
-            <Image
-              source={user?.photoURL ? { uri: user.photoURL } : require('@/assets/images/default-avatar.jpg')}
-              style={styles.profileImage}
-            />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    </Animated.View>
   );
 }
 
