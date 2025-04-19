@@ -66,13 +66,8 @@ export default function AddHabitScreen() {
         isNegative: isNegative
       });
       
-      Alert.alert(
-        'Success!', 
-        'Your new habit has been created.',
-        [
-          { text: 'OK', onPress: () => router.push('./index') }
-        ]
-      );
+      // Immediately redirect to index tab after successful creation
+      router.push('/(tabs)');
     } catch (err) {
       console.error('Failed to create habit:', err);
       setError('Failed to create habit. Please try again.');
