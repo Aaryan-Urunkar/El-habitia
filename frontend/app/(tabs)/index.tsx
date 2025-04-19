@@ -1,241 +1,343 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { LinearGradient } from "expo-linear-gradient"
-import { Feather } from "@expo/vector-icons"
-import MoodCategoryButton from "../../components/mood-category-button"
-import SleepMetrics from "../../components/sleep-metric"
+import { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ThemedText } from '@/components/ui/ThemedText';
+import { useTheme } from '@/components/theme/ThemeProvider';
+import { useAuthStore } from '@/store/authStore';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useThemeStore } from '@/store/themeStore';
 
-type HomeScreenProps = {}
+export default function DashboardScreen() {
+  const { colors, scheme } = useTheme();
+  const { user } = useAuthStore();
+  const { setMode, setColorScheme } = useThemeStore();
+  const [selectedTab, setSelectedTab] = useState<'today' | 'all'>('today');
+  const [moodMode, setMoodMode] = useState<'growth' | 'action'>('growth');
 
-export default function HomeScreen({}: HomeScreenProps) {
+  // Placeholder data for habits - moved to local state to avoid Firebase dependencies
+  const [habits, setHabits] = useState([
+    { id: '1', name: 'Morning Meditation', streak: 5, completed: true, category: 'wellness' },
+    { id: '2', name: 'Read 20 pages', streak: 12, completed: false, category: 'learning' },
+    { id: '3', name: 'Workout', streak: 3, completed: false, category: 'fitness' },
+    { id: '4', name: 'Drink 2L water', streak: 15, completed: true, category: 'health' },
+  ]);
+
+  // Toggle habit completion
+  const toggleHabitCompletion = (id: string) => {
+    setHabits(currentHabits => 
+      currentHabits.map(habit => 
+        habit.id === id ? { ...habit, completed: !habit.completed } : habit
+      )
+    );
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'wellness':
+        return 'heart.fill';
+      case 'learning':
+        return 'book.fill';
+      case 'fitness':
+        return 'figure.walk';
+      case 'health':
+        return 'drop.fill';
+      default:
+        return 'star.fill';
+    }
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const toggleMoodMode = () => {
+    const newMode = moodMode === 'growth' ? 'action' : 'growth';
+    setMoodMode(newMode);
+    
+    // Update theme based on mood mode
+    if (newMode === 'growth') {
+      // Growth mode uses light chill theme
+      setMode('light');
+      setColorScheme('chill');
+    } else {
+      // Action mode uses dark beast theme
+      setMode('dark');
+      setColorScheme('beast');
+    }
+  };
+
+  const todayHabits = habits.filter(h => !h.completed);
+  const displayHabits = selectedTab === 'today' ? todayHabits : habits;
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>👩‍🚀</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* Header Section */}
+        <View style={styles.headerContainer}>
+          {/* Avatar and User Info */}
+          <View style={styles.userSection}>
+            <Image
+              source={user?.photoURL ? { uri: user.photoURL } : require('@/assets/images/default-avatar.jpg')}
+              style={styles.avatar}
+            />
+            <View style={styles.userInfo}>
+              <ThemedText variant="caption">{getGreeting()}</ThemedText>
+              <ThemedText variant="title">{user?.displayName || 'Friend'}</ThemedText>
+            </View>
           </View>
-          <View style={styles.headerDots}>
-            <View style={styles.dot} />
-            <View style={styles.dot} />
+
+          {/* Mood Toggle and Progress */}
+          <View style={styles.rightSection}>
+            {/* Mood Toggle Button */}
+            <TouchableOpacity 
+              style={[styles.moodToggle, { backgroundColor: colors.card }]} 
+              onPress={toggleMoodMode}
+            >
+              <ThemedText style={styles.moodIcon}>
+                {moodMode === 'growth' ? '🌿' : '⚡'}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.moodText}>
+                {moodMode === 'growth' ? 'Growth' : 'Action'}
+              </ThemedText>
+            </TouchableOpacity>
+            
+            {/* Progress Circle or Streak Badge */}
+            {scheme === 'beast' ? (
+              <View style={[styles.streakBadge, { backgroundColor: colors.primary }]}>
+                <IconSymbol name="flame.fill" color="#FFFFFF" size={14} />
+                <ThemedText style={{ color: '#FFFFFF', fontFamily: colors.fonts.bold, fontSize: 14 }}>
+                  15 day streak!
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={[styles.progressCircle, { borderColor: colors.primary }]}>
+                <ThemedText style={{ color: colors.primary, fontFamily: colors.fonts.bold }}>75%</ThemedText>
+              </View>
+            )}
           </View>
-          <TouchableOpacity style={styles.refreshButton}>
-            <Feather name="refresh-cw" size={20} color="#000" />
+        </View>
+        
+        {/* Toggle Tabs */}
+        <View style={[styles.tabs, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity 
+            style={[
+              styles.tab, 
+              selectedTab === 'today' && { backgroundColor: colors.primary }
+            ]}
+            onPress={() => setSelectedTab('today')}
+          >
+            <ThemedText 
+              style={{ 
+                color: selectedTab === 'today' ? '#FFFFFF' : colors.text,
+                fontFamily: colors.fonts.medium 
+              }}
+            >
+              Today
+            </ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.tab, 
+              selectedTab === 'all' && { backgroundColor: colors.primary }
+            ]}
+            onPress={() => setSelectedTab('all')}
+          >
+            <ThemedText 
+              style={{ 
+                color: selectedTab === 'all' ? '#FFFFFF' : colors.text,
+                fontFamily: colors.fonts.medium 
+              }}
+            >
+              All Habits
+            </ThemedText>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.sectionTitle}>Question based on your mood</Text>
-
-        <LinearGradient
-          colors={["#E0F7FA", "#B2EBF2"]}
-          style={styles.questionCard}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.questionText}>
-            Everything falls in place when you feel grateful, why are you feeling greatful?
-          </Text>
-
-          <View style={styles.categoriesContainer}>
-            <View style={styles.categoryRow}>
-              <MoodCategoryButton icon="😴" label="Sleep" />
-              <MoodCategoryButton icon="🛍️" label="Shopping" />
-              <MoodCategoryButton icon="🏃‍♂️" label="Activity" />
+        
+        {/* Habits List */}
+        <View style={styles.habitsContainer}>
+          {displayHabits.length === 0 ? (
+            <View style={[styles.emptyState, { borderColor: colors.border }]}>
+              <IconSymbol name="checkmark.circle" size={48} color={colors.primary} />
+              <ThemedText style={{ textAlign: 'center', marginTop: 16 }}>
+                All done for today! Great job!
+              </ThemedText>
             </View>
-            <View style={styles.categoryRow}>
-              <MoodCategoryButton icon="🌤️" label="Weather" />
-              <MoodCategoryButton icon="🎉" label="Party" />
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Other answer..." placeholderTextColor="#A0A0A0" />
-            <TouchableOpacity style={styles.sendButton}>
-              <Feather name="send" size={18} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-
-        <Text style={styles.sectionTitle}>Recommendation based on mood</Text>
-
-        <View style={styles.recommendationCard}>
-          <Text style={styles.recommendationTitle}>Improve your sleep</Text>
-
-          <View style={styles.sleepInfoContainer}>
-            <View style={styles.sleepCircleContainer}>
-              <View style={styles.sleepCircleOuter}>
-                <View style={styles.sleepCircleInner}>
-                  <View style={styles.sleepCircleCore} />
+          ) : (
+            displayHabits.map((habit, index) => (
+              <Animated.View 
+                key={habit.id} 
+                entering={FadeInDown.delay(index * 100).springify()}
+                style={[
+                  styles.habitCard, 
+                  { 
+                    backgroundColor: colors.card,
+                    borderLeftColor: colors.primary,
+                  }
+                ]}
+              >
+                <TouchableOpacity 
+                  style={[
+                    styles.checkbox, 
+                    { 
+                      borderColor: colors.primary,
+                      backgroundColor: habit.completed ? colors.primary : 'transparent' 
+                    }
+                  ]}
+                  onPress={() => toggleHabitCompletion(habit.id)}
+                >
+                  {habit.completed && (
+                    <IconSymbol name="checkmark" size={16} color="#FFFFFF" />
+                  )}
+                </TouchableOpacity>
+                
+                <View style={styles.habitInfo}>
+                  <ThemedText>{habit.name}</ThemedText>
+                  <View style={styles.streakContainer}>
+                    <IconSymbol 
+                      name={scheme === 'beast' ? "flame.fill" : "sparkles"} 
+                      size={12} 
+                      color={colors.primary} 
+                    />
+                    <ThemedText variant="caption" style={{ color: colors.primary }}>
+                      {habit.streak} day streak
+                    </ThemedText>
+                  </View>
                 </View>
-              </View>
-            </View>
-
-            <View style={styles.sleepTextContainer}>
-              <Text style={styles.sleepMainText}>You wakeup 4 times during sleep which is not good</Text>
-              <TouchableOpacity>
-                <Text style={styles.courseText}>Take a course</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <SleepMetrics />
+                
+                <View style={[styles.categoryBadge, { backgroundColor: colors.background }]}>
+                  <IconSymbol name={getCategoryIcon(habit.category)} size={14} color={colors.primary} />
+                </View>
+              </Animated.View>
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#E3F2FD",
     padding: 16,
+    gap: 16,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  userSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  userInfo: {
+    justifyContent: 'center',
+  },
+  rightSection: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  moodToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
+  moodIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  moodText: {
+    fontSize: 12,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#9C27B0",
-    justifyContent: "center",
-    alignItems: "center",
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
   },
-  avatarText: {
-    fontSize: 20,
+  progressCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerDots: {
-    flexDirection: "row",
-    marginLeft: 10,
+  tabs: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
   },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#000",
-    marginRight: 3,
-  },
-  refreshButton: {
-    marginLeft: "auto",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FFF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    fontFamily: "Poppins-Medium",
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 10,
-  },
-  questionCard: {
-    backgroundColor: "#E0F7FA",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-  },
-  questionText: {
-    fontFamily: "Poppins-SemiBold",
-    fontSize: 18,
-    color: "#000",
-    marginBottom: 20,
-  },
-  categoriesContainer: {
-    marginBottom: 20,
-  },
-  categoryRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 15,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  input: {
+  tab: {
     flex: 1,
-    height: 50,
-    backgroundColor: "#FFF",
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    fontFamily: "Poppins-Regular",
-    fontSize: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 10,
+  habitsContainer: {
+    gap: 12,
   },
-  recommendationCard: {
-    backgroundColor: "#FFF5F7",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
+  habitCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
   },
-  recommendationTitle: {
-    fontFamily: "Poppins-SemiBold",
-    fontSize: 16,
-    color: "#000",
-    marginBottom: 15,
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sleepInfoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  sleepCircleContainer: {
-    width: 70,
-    height: 70,
-    marginRight: 15,
-  },
-  sleepCircleOuter: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 8,
-    borderColor: "#9C27B0",
-    opacity: 0.3,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sleepCircleInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 8,
-    borderColor: "#9C27B0",
-    opacity: 0.6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sleepCircleCore: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#9C27B0",
-    opacity: 0.9,
-  },
-  sleepTextContainer: {
+  habitInfo: {
     flex: 1,
+    marginLeft: 12,
   },
-  sleepMainText: {
-    fontFamily: "Poppins-Medium",
-    fontSize: 14,
-    color: "#000",
-    marginBottom: 5,
+  streakContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
   },
-  courseText: {
-    fontFamily: "Poppins-Medium",
-    fontSize: 14,
-    color: "#9C27B0",
+  categoryBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-})
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    marginTop: 16,
+  },
+});

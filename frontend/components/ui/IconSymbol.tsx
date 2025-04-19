@@ -45,7 +45,12 @@ const MAPPING = {
   'person': 'person-outline',
   'sparkles': 'auto-awesome',
   'moon.fill': 'nightlight-round',
-  'sun.max.fill': 'wb-sunny'
+  'sun.max.fill': 'wb-sunny',
+  'plus': 'add',
+  'bubble': 'chat-bubble-outline',
+  'bubble.fill': 'chat-bubble',
+  'message': 'message',
+  'message.fill': 'message'
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
