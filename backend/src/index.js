@@ -13,10 +13,10 @@ const PORT = process.env.PORT || 5001
 
 app.use(express.json())
 app.use(cookieParser())
-app.use(cors({
-    origin : "*",
-    credentials : true 
-}))
+// app.use(cors({
+//     origin : "*",
+//     credentials : true 
+// }))
 
 app.use("/api/auth" , auth_router)
 app.use("/api/community-post" , community_post_router)

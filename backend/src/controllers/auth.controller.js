@@ -48,15 +48,17 @@ export const signup = async(req , res)=>{
 export const login = async(req , res) =>{
     const {email , password} = req.body
     try{
+        
         const user = await User.findOne({email})
         if(!user){
             res.status(400).json({message : "Invalid credentials"})
         }
-
+        
         const isPasswordCorrect = await bcrypt.compare(password , user.password)
         if(!isPasswordCorrect){
             return res.status(400).json({message : "Invalid credentials"})
         }
+        console.log("In here");
 
         const token = generateToken(user._id , res)
 
@@ -72,6 +74,31 @@ export const login = async(req , res) =>{
         res.status(500).json({message : "Internal server error"})
     }
 }
+
+export const addPersonality= async(req , res) =>{
+    try{
+        const token = req.headers.authorization?.split(' ')[1]
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        const userId = decoded.userId
+        const {procrastinationResponse, sleepResponse, alcoholSmokingResponse} = req.body
+        if(!procrastinationResponse || !sleepResponse || !alcoholSmokingResponse){
+            return res.status(400).json({msg : "Fill all 3 fields"})
+        }
+        const user = await User.findOne({_id : userId})
+        if(!user){
+            return res.status(400).json({msg : "No user found"})
+        }
+        user.procrastinationResponse = procrastinationResponse
+        user.sleepResponse = sleepResponse
+        user.alcoholSmokingResponse = alcoholSmokingResponse
+        user.save()
+        return res.status(200).json({msg : "User updated" , user})
+    }catch(e){
+        return res.status(500).json({msg : "Internal server error"})
+    }
+
+}
+
 
 export const logout = (req , res) =>{
     try{
