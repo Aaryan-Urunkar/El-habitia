@@ -1,25 +1,36 @@
-import { useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useThemeStore } from '@/store/themeStore';
 
 export default function DashboardScreen() {
   const { colors, scheme } = useTheme();
   const { user } = useAuthStore();
+  const { setMode, setColorScheme } = useThemeStore();
   const [selectedTab, setSelectedTab] = useState<'today' | 'all'>('today');
+  const [moodMode, setMoodMode] = useState<'growth' | 'action'>('growth');
 
-  // Placeholder data for habits
-  const habits = [
+  // Placeholder data for habits - moved to local state to avoid Firebase dependencies
+  const [habits, setHabits] = useState([
     { id: '1', name: 'Morning Meditation', streak: 5, completed: true, category: 'wellness' },
     { id: '2', name: 'Read 20 pages', streak: 12, completed: false, category: 'learning' },
     { id: '3', name: 'Workout', streak: 3, completed: false, category: 'fitness' },
     { id: '4', name: 'Drink 2L water', streak: 15, completed: true, category: 'health' },
-  ];
+  ]);
+
+  // Toggle habit completion
+  const toggleHabitCompletion = (id: string) => {
+    setHabits(currentHabits => 
+      currentHabits.map(habit => 
+        habit.id === id ? { ...habit, completed: !habit.completed } : habit
+      )
+    );
+  };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -43,6 +54,22 @@ export default function DashboardScreen() {
     return 'Good Evening';
   };
 
+  const toggleMoodMode = () => {
+    const newMode = moodMode === 'growth' ? 'action' : 'growth';
+    setMoodMode(newMode);
+    
+    // Update theme based on mood mode
+    if (newMode === 'growth') {
+      // Growth mode uses light chill theme
+      setMode('light');
+      setColorScheme('chill');
+    } else {
+      // Action mode uses dark beast theme
+      setMode('dark');
+      setColorScheme('beast');
+    }
+  };
+
   const todayHabits = habits.filter(h => !h.completed);
   const displayHabits = selectedTab === 'today' ? todayHabits : habits;
 
@@ -50,24 +77,48 @@ export default function DashboardScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={styles.container}>
         {/* Header Section */}
-        <View style={styles.header}>
-          <View>
-            <ThemedText variant="caption">{getGreeting()}</ThemedText>
-            <ThemedText variant="title">{user?.displayName || 'Friend'}</ThemedText>
+        <View style={styles.headerContainer}>
+          {/* Avatar and User Info */}
+          <View style={styles.userSection}>
+            <Image
+              source={user?.photoURL ? { uri: user.photoURL } : require('@/assets/images/default-avatar.jpg')}
+              style={styles.avatar}
+            />
+            <View style={styles.userInfo}>
+              <ThemedText variant="caption">{getGreeting()}</ThemedText>
+              <ThemedText variant="title">{user?.displayName || 'Friend'}</ThemedText>
+            </View>
           </View>
-          
-          {scheme === 'beast' ? (
-            <View style={[styles.streakBadge, { backgroundColor: colors.primary }]}>
-              <IconSymbol name="flame.fill" color="#FFFFFF" size={14} />
-              <ThemedText style={{ color: '#FFFFFF', fontFamily: colors.fonts.bold, fontSize: 14 }}>
-                15 day streak!
+
+          {/* Mood Toggle and Progress */}
+          <View style={styles.rightSection}>
+            {/* Mood Toggle Button */}
+            <TouchableOpacity 
+              style={[styles.moodToggle, { backgroundColor: colors.card }]} 
+              onPress={toggleMoodMode}
+            >
+              <ThemedText style={styles.moodIcon}>
+                {moodMode === 'growth' ? '🌿' : '⚡'}
               </ThemedText>
-            </View>
-          ) : (
-            <View style={[styles.progressCircle, { borderColor: colors.primary }]}>
-              <ThemedText style={{ color: colors.primary, fontFamily: colors.fonts.bold }}>75%</ThemedText>
-            </View>
-          )}
+              <ThemedText variant="caption" style={styles.moodText}>
+                {moodMode === 'growth' ? 'Growth' : 'Action'}
+              </ThemedText>
+            </TouchableOpacity>
+            
+            {/* Progress Circle or Streak Badge */}
+            {scheme === 'beast' ? (
+              <View style={[styles.streakBadge, { backgroundColor: colors.primary }]}>
+                <IconSymbol name="flame.fill" color="#FFFFFF" size={14} />
+                <ThemedText style={{ color: '#FFFFFF', fontFamily: colors.fonts.bold, fontSize: 14 }}>
+                  15 day streak!
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={[styles.progressCircle, { borderColor: colors.primary }]}>
+                <ThemedText style={{ color: colors.primary, fontFamily: colors.fonts.bold }}>75%</ThemedText>
+              </View>
+            )}
+          </View>
         </View>
         
         {/* Toggle Tabs */}
@@ -137,6 +188,7 @@ export default function DashboardScreen() {
                       backgroundColor: habit.completed ? colors.primary : 'transparent' 
                     }
                   ]}
+                  onPress={() => toggleHabitCompletion(habit.id)}
                 >
                   {habit.completed && (
                     <IconSymbol name="checkmark" size={16} color="#FFFFFF" />
@@ -173,6 +225,44 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     gap: 16,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  userSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  userInfo: {
+    justifyContent: 'center',
+  },
+  rightSection: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  moodToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
+  moodIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  moodText: {
+    fontSize: 12,
   },
   header: {
     flexDirection: 'row',

@@ -41,7 +41,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack initialRouteName="(auth)">
+          <Stack>
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="(shared)" options={{ headerShown: false }} />

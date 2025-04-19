@@ -9,30 +9,6 @@ import { ThemedText } from '@/components/ui/ThemedText';
 
 export default function TabsLayout() {
   const { colors, scheme } = useTheme();
-  const { user, isLoading } = useAuthStore();
-  const rootNavigationState = useRootNavigationState();
-  
-  useEffect(() => {
-    // Only redirect when the navigation is ready and authentication check is complete
-    if (!isLoading && !user && rootNavigationState?.key) {
-      router.replace('/(auth)/landing');
-    }
-  }, [user, isLoading, rootNavigationState?.key]);
-
-  // Show loading state while checking authentication
-  if (isLoading || !rootNavigationState?.key) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ThemedText>Loading...</ThemedText>
-      </View>
-    );
-  }
-
-  // Don't render tabs until we're sure user is authenticated
-  if (!user) {
-    return null;
-  }
-
   return (
     <Tabs
       screenOptions={{

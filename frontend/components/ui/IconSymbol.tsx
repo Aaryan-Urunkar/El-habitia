@@ -3,16 +3,49 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight } from 'expo-symbols';
 import React from 'react';
-import { OpaqueColorValue, StyleProp, ViewStyle, StyleSheet, Text, TextProps } from 'react-native';
+import { OpaqueColorValue, StyleProp, ViewStyle, StyleSheet, Text, TextProps, Platform } from 'react-native';
 
 // Add your SFSymbol to MaterialIcons mappings here.
 const MAPPING = {
   // See MaterialIcons here: https://icons.expo.fyi
   // See SF Symbols in the SF Symbols app on Mac.
   'house.fill': 'home',
+  'house': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'chevron.left': 'chevron-left',
+  'plus.circle': 'add-circle-outline',
+  'plus.circle.fill': 'add-circle',
+  'person.3': 'groups',
+  'person.3.fill': 'groups',
+  'calendar': 'calendar-today',
+  'calendar.fill': 'calendar-month',
+  'gearshape': 'settings',
+  'gearshape.fill': 'settings',
+  'heart.fill': 'favorite',
+  'heart': 'favorite-border',
+  'book.fill': 'book',
+  'book': 'menu-book',
+  'figure.walk': 'directions-walk',
+  'drop.fill': 'water-drop',
+  'drop': 'water',
+  'star.fill': 'star',
+  'star': 'star-outline',
+  'flame.fill': 'local-fire-department',
+  'leaf.fill': 'eco',
+  'checkmark': 'check',
+  'checkmark.circle': 'check-circle-outline',
+  'checkmark.circle.fill': 'check-circle',
+  'bell.fill': 'notifications',
+  'bell': 'notifications-none',
+  'lock.fill': 'lock',
+  'lock': 'lock-outline',
+  'person.fill': 'person',
+  'person': 'person-outline',
+  'sparkles': 'auto-awesome',
+  'moon.fill': 'nightlight-round',
+  'sun.max.fill': 'wb-sunny'
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
@@ -51,7 +84,8 @@ const getWeightValue = (weight: WeightType): number => {
 };
 
 /**
- * An icon component that uses native SFSymbols on iOS, and MaterialIcons on Android and web. This ensures a consistent look across platforms, and optimal resource usage.
+ * An icon component that uses native SFSymbols on iOS, and MaterialIcons on Android and web.
+ * This ensures a consistent look across platforms, and optimal resource usage.
  *
  * Icon `name`s are based on SFSymbols and require manual mapping to MaterialIcons.
  */
@@ -64,9 +98,22 @@ export function IconSymbol({
   style,
   ...props 
 }: IconSymbolProps) {
-  // For iOS/macOS, SF Symbols are used directly
-  // For other platforms, need to implement a fallback (e.g., using vector icons)
+  // For non-iOS platforms, use Material Icons
+  const materialName = MAPPING[name as IconSymbolName];
   
+  if (Platform.OS !== 'ios' && materialName) {
+    return (
+      <MaterialIcons
+        name={materialName}
+        size={size}
+        color={color}
+        style={style}
+      />
+    );
+  }
+
+  // This is a fallback that simply shows the name as text
+  // (only reached if the name is not mapped for non-iOS platforms)
   return (
     <Text
       style={[
