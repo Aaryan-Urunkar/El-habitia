@@ -55,9 +55,9 @@ export const trackHabit = async (req, res) => {
           if (!habit) return res.status(404).json({ message: 'Habit not found' })
   
           const newHabitLog = await HabitLog.create({
-              habit:habit._id,
-              user:userId,
-              status:"completed"
+              habit: habit._id,
+              user: userId,
+              status: "completed"
           })
           
           const lastTracked = habit.lastTracked
@@ -67,23 +67,30 @@ export const trackHabit = async (req, res) => {
               habit.tracked = [1]
               habit.streak = 1
           } else {
-          const daysDiff = Math.floor((now - lastTracked) / (1000 * 60 * 60 * 24))
+              const daysDiff = Math.floor((now - lastTracked) / (1000 * 60 * 60 * 24))
   
-          if (daysDiff === 1) {
-              habit.tracked.push(1)
-              habit.streak += 1
-          } else if (daysDiff > 1) {
-              habit.tracked.push(1)
-              habit.streak = 1
-          } else if (daysDiff === 0) {
-              return res.status(400).json({ message: 'Already tracked today' })
-          }
+              if (daysDiff === 0) {
+                  // Allow multiple tracks on the same day
+                  // Increment the last element of tracked array
+                  const lastIndex = habit.tracked.length - 1
+                  habit.tracked[lastIndex] += 1
+              } else if (daysDiff === 1) {
+                  habit.tracked.push(1)
+                  habit.streak += 1
+              } else if (daysDiff > 1) {
+                  habit.streak += 1
+              }
           }
   
           habit.lastTracked = now
           await habit.save()
   
-          res.json({ message: 'Habit tracked', streak: habit.streak , newHabitLog})
+          res.json({ 
+              message: 'Habit tracked successfully', 
+              streak: habit.streak,
+              trackCount: habit.tracked[habit.tracked.length - 1],
+              newHabitLog
+          })
   
     } catch (err) {
       res.status(401).json({ message: 'Invalid token OR internal server error' })

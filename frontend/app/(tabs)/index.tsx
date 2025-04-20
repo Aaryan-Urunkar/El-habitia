@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -8,65 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useThemeStore } from '@/store/themeStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// API function to get habits
-interface Habit {
-  _id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  streak?: number;
-  completed?: boolean;
-  isNegative?: boolean;
-}
-
-interface GetHabitsResponse {
-  habits: Habit[];
-}
-
-// Track habit API function
-const trackHabit = async (token: string, habitTitle: string): Promise<any> => {
-  try {
-    const response = await fetch(`http://192.168.24.47:5001/api/habit/track-habit/${habitTitle}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to track habit');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
-  }
-};
-
-const getHabits = async (token: string): Promise<GetHabitsResponse> => {
-  try {
-    const response = await fetch('http://192.168.24.47:5001/api/habit/get-habits', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch habits');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
-  }
-};
+import { useHabitStore, useLoadHabits, trackHabitApi, Habit } from '@/store/habitStore';
 
 export default function DashboardScreen() {
   const { colors, scheme } = useTheme();
@@ -74,75 +16,15 @@ export default function DashboardScreen() {
   const { setMode, setColorScheme } = useThemeStore();
   const [selectedTab, setSelectedTab] = useState<'today' | 'all'>('today');
   const [moodMode, setMoodMode] = useState<'growth' | 'action'>('growth');
-  const [habits, setHabits] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  
+  // Use our Zustand store
+  const { habits, loading, error, updateHabit, addHabit } = useHabitStore();
+  const loadHabits = useLoadHabits();
+  
   // Fetch habits when component mounts
   useEffect(() => {
-    fetchHabits();
+    loadHabits();
   }, []);
-
-  const fetchHabits = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('[Habits] Fetching habits...');
-      
-      // Get token from AsyncStorage
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-      
-      // Call the backend API
-      const response = await getHabits(token);
-      
-      console.log('[Habits] Raw response:', JSON.stringify(response, null, 2));
-      
-      // Check if habits array exists in the response
-      if (!response.habits || !Array.isArray(response.habits)) {
-        console.error('[Habits] Expected habits array in response but got:', response);
-        throw new Error('Invalid response structure');
-      }
-      
-      // Map the response to our component's expected format
-      const mappedHabits = response.habits.map(habit => ({
-        id: habit._id || String(Math.random()),
-        title: habit.title,
-        description: habit.description || '',
-        category: habit.category || 'wellness', // Default category if none provided
-        streak: habit.streak || 0,
-        completed: habit.completed || false,
-        isNegative: habit.isNegative || false
-      }));
-      
-      console.log('[Habits] All mapped habits:', JSON.stringify(mappedHabits, null, 2));
-      setHabits(mappedHabits);
-    } catch (err) {
-      console.error('[Habits] Failed to fetch habits:', err);
-      setError('Failed to load habits. Please try again.');
-      
-      // Let's improve our logging to help with debugging
-      if (err instanceof Error) {
-        console.error('[Habits] Error details:', err.message);
-      }
-      
-      // Fallback to sample data if API fails
-      const fallbackHabits = [
-        { id: '1', title: 'Morning Meditation', streak: 5, completed: true, category: 'wellness', ownerId: user?.id || 'defaultOwner' },
-        { id: '2', title: 'Read 20 pages', streak: 12, completed: false, category: 'learning', ownerId: user?.id || 'defaultOwner' },
-        { id: '3', title: 'Workout', streak: 3, completed: false, category: 'fitness', ownerId: user?.id || 'defaultOwner' },
-        { id: '4', title: 'Drink 2L water', streak: 15, completed: true, category: 'health', ownerId: user?.id || 'defaultOwner' },
-      ];
-      
-      console.log('[Habits] Using fallback habits data:', JSON.stringify(fallbackHabits, null, 2));
-      setHabits(fallbackHabits);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Toggle habit completion
   const toggleHabitCompletion = async (id: string, title: string) => {
@@ -158,45 +40,25 @@ export default function DashboardScreen() {
     try {
       // Only proceed with API call if habit is not completed
       if (!habitToUpdate.completed) {
-        // Get token from AsyncStorage
-        const token = await AsyncStorage.getItem('userToken');
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
-
         // Optimistically update the UI
-        setHabits(currentHabits => 
-          currentHabits.map(habit => {
-            if (habit.id === id) {
-              const updatedHabit = { ...habit, completed: true };
-              console.log('[Habits] Updated habit in UI:', updatedHabit);
-              return updatedHabit;
-            }
-            return habit;
-          })
-        );
+        updateHabit(id, { completed: true });
         
         // Call the track habit API
-        const response = await trackHabit(token, title);
+        const response = await trackHabitApi(title);
         console.log('[Habits] Habit tracking response:', response);
         
         // If the habit has a new streak, update it
         if (response && response.streak) {
-          setHabits(currentHabits => 
-            currentHabits.map(habit => {
-              if (habit.id === id) {
-                return { ...habit, streak: response.streak };
-              }
-              return habit;
-            })
-          );
+          updateHabit(id, { streak: response.streak });
         }
         
         // Move to "All Habits" tab after completion
         setSelectedTab('all');
+
+        // Reload habits to ensure UI is in sync with backend
+        loadHabits();
       } else {
-        // If already completed, just toggle the UI without API call
-        // This is just for UI demonstration - typically you wouldn't allow "uncompleting" a habit
+        // If already completed, just show an alert
         Alert.alert(
           "Habit Already Completed", 
           "This habit has already been completed today."
@@ -207,11 +69,7 @@ export default function DashboardScreen() {
       Alert.alert('Error', 'Failed to update habit. Please try again.');
       
       // Revert the optimistic update
-      setHabits(currentHabits => 
-        currentHabits.map(habit => 
-          habit.id === id ? { ...habit, completed: habitToUpdate.completed } : habit
-        )
-      );
+      updateHabit(id, { completed: habitToUpdate.completed });
     }
   };
 
