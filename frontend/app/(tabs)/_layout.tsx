@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { StyleSheet, View, Dimensions, Pressable, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, memo } from 'react';
 import { router, useRootNavigationState } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -13,7 +13,8 @@ import Animated, {
   withSpring,
   useSharedValue,
   FadeIn,
-  SlideInUp
+  SlideInUp,
+  Easing
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,23 +24,47 @@ import React from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import HeaderBar from '@/components/HeaderBar';
 
+// Constants
 const { width } = Dimensions.get('window');
 const TAB_WIDTH = width / 5;
+const TAB_BAR_HEIGHT = 65;
 
-// Constant for tab bar height
-const TAB_BAR_HEIGHT = 65; // Fixed height for the tab bar
+// Type definitions
+type TabRoute = {
+  key: string;
+  name: string;
+  params?: Readonly<object | undefined>;
+};
 
+type TabBarIconProps = {
+  focused: boolean;
+  color: string;
+  size: number;
+};
+
+interface TabBarOptions {
+  tabBarIcon?: (props: TabBarIconProps) => JSX.Element;
+  title?: string;
+}
+
+import type { BottomTabBarProps as NavigationBottomTabBarProps } from '@react-navigation/bottom-tabs';
+
+type BottomTabBarProps = NavigationBottomTabBarProps;
+
+/**
+ * Main TabsLayout component that handles tab navigation and theme application
+ */
 export default function TabsLayout() {
   const { colors, scheme, mode } = useTheme();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useThemeStore();
   
-  // Check authentication state here if needed
+  // Check authentication state
   const navigationState = useRootNavigationState();
   const { user } = useAuthStore();
   
-  // Header gradient colors based on theme
-  const getHeaderGradientColors = (): [string, string, ...string[]] => {
+  // Memoize header gradient colors based on theme to prevent re-calculations
+  const getHeaderGradientColors = useCallback((): [string, string, ...string[]] => {
     if (mode === 'dark') {
       return colorScheme === 'beast' 
         ? ['#27272A', '#18181B'] 
@@ -49,25 +74,32 @@ export default function TabsLayout() {
         ? ['#FFFBEB', '#FFF8E6'] 
         : ['#f1f9fe', '#e6f4fd'];
     }
-  };
+  }, [mode, colorScheme]);
   
+  // Authentication check
   useEffect(() => {
     if (!navigationState?.key) return;
     
     if (!user) {
       // Redirect to login if not authenticated
+      // Uncomment when ready to implement auth redirect
       // router.replace('/(auth)/login');
     }
   }, [navigationState?.key, user]);
 
+  // Memoized tab bar component to prevent unnecessary re-renders
+  const TabBar = useCallback((props: BottomTabBarProps) => (
+    <FloatingTabBar {...props} />
+  ), []);
+
   return (
     <ProtectedRoute>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={styles.container}>
         <Tabs
           screenOptions={{
             tabBarActiveTintColor: colors.primary,
             tabBarInactiveTintColor: colors.subtext,
-            headerShown: false, // Hide the default header as we're using custom header
+            headerShown: false,
             headerStyle: {
               backgroundColor: colors.card,
             },
@@ -76,22 +108,25 @@ export default function TabsLayout() {
               fontSize: 18,
               color: colors.text,
             },
-            // Add bottom padding to ensure content isn't hidden behind the tab bar
+            // Hide default tab bar as we're using custom implementation
             tabBarStyle: {
-              display: 'none', // Hide default tab bar as we're using custom implementation
+              display: 'none',
               paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 20,
             }
           }}
-          tabBar={props => <FloatingTabBar {...props} />}
+          tabBar={TabBar}
         >
           <Tabs.Screen
             name="index"
             options={{
               title: 'Dashboard',
               tabBarIcon: ({ color, size, focused }) => (
-                <IconSymbol name={focused ? "house.fill" : "house"} color={color} size={size} />
+                <IconSymbol 
+                  name={focused ? "house.fill" : "house"} 
+                  color={color} 
+                  size={size} 
+                />
               ),
-              // Custom header for Dashboard
               header: () => (
                 <HeaderBar
                   title="Dashboard" 
@@ -105,9 +140,12 @@ export default function TabsLayout() {
             options={{
               title: 'Mood',
               tabBarIcon: ({ color, size, focused }) => (
-                <IconSymbol name={focused ? "heart.fill" : "heart"} color={color} size={size} />
+                <IconSymbol 
+                  name={focused ? "heart.fill" : "heart"} 
+                  color={color} 
+                  size={size} 
+                />
               ),
-              // Custom header for Mood Tracker
               header: () => (
                 <HeaderBar
                   title="Mood Tracker" 
@@ -121,9 +159,12 @@ export default function TabsLayout() {
             options={{
               title: 'Add',
               tabBarIcon: ({ color, size }) => (
-                <IconSymbol name="plus.circle.fill" color="#FFF" size={size + 6} />
+                <IconSymbol 
+                  name="plus.circle.fill" 
+                  color="#FFF" 
+                  size={size + 6} 
+                />
               ),
-              // Custom header for Add Habit
               header: () => (
                 <HeaderBar
                   title="Add Habit" 
@@ -133,7 +174,7 @@ export default function TabsLayout() {
             }}
             listeners={{
               tabPress: e => {
-                // Optional: prevent default navigation and implement a modal
+                // Custom handling for add button can be implemented here
                 // e.preventDefault();
                 // router.push('/add-habit-modal');
               },
@@ -144,9 +185,12 @@ export default function TabsLayout() {
             options={{
               title: 'Chatbot',
               tabBarIcon: ({ color, size, focused }) => (
-                <IconSymbol name={focused ? "bubble.fill" : "bubble"} color={color} size={size} />
+                <IconSymbol 
+                  name={focused ? "bubble.fill" : "bubble"} 
+                  color={color} 
+                  size={size} 
+                />
               ),
-              // Custom header for Chatbot
               header: () => (
                 <HeaderBar
                   title="AI Assistant" 
@@ -160,9 +204,12 @@ export default function TabsLayout() {
             options={{
               title: 'Community',
               tabBarIcon: ({ color, size, focused }) => (
-                <IconSymbol name={focused ? "person.3.fill" : "person.3"} color={color} size={size} />
+                <IconSymbol 
+                  name={focused ? "person.3.fill" : "person.3"} 
+                  color={color} 
+                  size={size} 
+                />
               ),
-              // Custom header for Community
               header: () => (
                 <HeaderBar
                   title="Community" 
@@ -177,8 +224,161 @@ export default function TabsLayout() {
   );
 }
 
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+/**
+ * Tab indicator component - Memoized to prevent unnecessary re-renders
+ */
+const TabIndicator = memo(({ 
+  position, 
+  accentColor 
+}: { 
+  position: Animated.SharedValue<number>; 
+  accentColor: string;
+}) => {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: position.value }],
+      opacity: withTiming(1, { duration: 200 }),
+      backgroundColor: accentColor + '20',
+    };
+  });
 
+  return (
+    <Animated.View 
+      style={[styles.tabIndicator, animatedStyle]} 
+    />
+  );
+});
+
+/**
+ * TabBarItem component for regular tabs - Memoized to prevent re-renders
+ */
+const TabBarItem = memo(({ 
+  route, 
+  isFocused, 
+  onPress, 
+  colors, 
+  options 
+}: { 
+  route: TabRoute; 
+  isFocused: boolean; 
+  onPress: () => void; 
+  colors: any;
+  options: TabBarOptions;
+}) => {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tabItem,
+        pressed && styles.pressed
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isFocused }}
+      accessibilityLabel={options?.title || route.name}
+    >
+      <View style={styles.tabIconContainer}>
+        {options.tabBarIcon?.({
+          focused: isFocused,
+          color: isFocused ? colors.primary : colors.subtext,
+          size: 22,
+        }) || (
+          <IconSymbol
+            name="circle"
+            color={isFocused ? colors.primary : colors.subtext}
+            size={22}
+          />
+        )}
+      </View>
+      
+      <ThemedText 
+        style={[
+          styles.tabLabel,
+          { 
+            color: isFocused ? colors.primary : colors.subtext,
+            fontFamily: isFocused ? colors.fonts.semiBold : colors.fonts.regular,
+          }
+        ]}
+        numberOfLines={1}
+      >
+        {options?.title || route.name}
+      </ThemedText>
+    </Pressable>
+  );
+});
+
+/**
+ * AddButton component - Special tab button with gradient background
+ */
+const AddButton = memo(({ 
+  route, 
+  isFocused, 
+  onPress, 
+  colors, 
+  options,
+  gradientColors
+}: { 
+  route: TabRoute; 
+  isFocused: boolean; 
+  onPress: () => void; 
+  colors: any;
+  options: TabBarOptions;
+  gradientColors: [string, string, ...string[]];
+}) => {
+  return (
+    <View style={styles.addButtonContainer}>
+      <Animated.View
+        entering={FadeIn.delay(300).duration(500)}
+        style={styles.addButton}
+      >
+        <LinearGradient
+          colors={gradientColors}
+          style={styles.addButtonGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+              styles.addButtonContent,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isFocused }}
+            accessibilityLabel={options?.title || route.name}
+          >
+            {options.tabBarIcon?.({
+              focused: isFocused,
+              color: '#FFFFFF',
+              size: 24,
+            }) || (
+              <IconSymbol
+                name="plus.circle.fill"
+                color="#FFFFFF"
+                size={24}
+              />
+            )}
+          </Pressable>
+        </LinearGradient>
+      </Animated.View>
+      <ThemedText 
+        style={[
+          styles.tabLabelCenter,
+          { 
+            color: isFocused ? colors.primary : colors.subtext,
+            fontFamily: isFocused ? colors.fonts.semiBold : colors.fonts.medium,
+          }
+        ]}
+        numberOfLines={1}
+      >
+        {options?.title || route.name}
+      </ThemedText>
+    </View>
+  );
+});
+
+/**
+ * Custom floating tab bar implementation with animations
+ */
 function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
   const { colorScheme } = useThemeStore();
@@ -188,64 +388,37 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const indicatorPosition = useSharedValue(state.index * TAB_WIDTH);
   const [prevIndex, setPrevIndex] = useState(state.index);
   
-  // Fixed positions for each tab indicator
-  const tabPositions = [0, TAB_WIDTH - 10, TAB_WIDTH * 2 - 20, TAB_WIDTH * 3 - 30, TAB_WIDTH * 4 - 40];
+  // Memoize tab positions to prevent recalculation
+  const tabPositions = useCallback(() => [
+    0, 
+    TAB_WIDTH - 10, 
+    TAB_WIDTH * 2 - 20, 
+    TAB_WIDTH * 3 - 30, 
+    TAB_WIDTH * 4 - 40
+  ], [])();
+  
+  // Generate gradient colors based on theme - memoized
+  const gradientColors = useCallback((): [string, string, ...string[]] => {
+    return colorScheme === 'beast' 
+      ? ['#8B5CF6', '#EC4899'] // Vibrant gradient for beast mode
+      : ['#6366F1', '#3B82F6'];  // Calmer gradient for chill mode
+  }, [colorScheme])();
 
-  // Update indicator position when tab changes with improved spring configuration
+  // Update indicator position when tab changes
   useEffect(() => {
     if (prevIndex !== state.index) {
-      // Use the pre-calculated position for exact alignment
+      // Use optimized spring animation for smoother transitions
       indicatorPosition.value = withSpring(tabPositions[state.index], {
         damping: 20,
         stiffness: 150,
-        mass: 0.8, // Lower mass for quicker response
+        mass: 0.8,
         overshootClamping: false,
         restDisplacementThreshold: 0.01,
         restSpeedThreshold: 0.01,
       });
       setPrevIndex(state.index);
-      
-      // Ensure navigation is properly set up
-      const route = state.routes[state.index];
-      if (route && !descriptors[route.key]?.navigation) {
-        console.log(`Warning: Missing navigation for route ${route.name}`);
-      }
     }
-  }, [state.index, prevIndex, tabPositions]);
-  
-  // Generate gradient colors based on theme
-  const gradientColors: [string, string, ...string[]] = colorScheme === 'beast' 
-    ? ['#8B5CF6', '#EC4899'] // Vibrant gradient for beast mode
-    : ['#6366F1', '#3B82F6']; // Calmer gradient for chill mode
-
-  // Helper function to safely render tab bar icon
-  interface TabBarIconProps {
-    focused: boolean;
-    color: string;
-    size: number;
-  }
-
-  interface TabBarOptions {
-    tabBarIcon?: (props: TabBarIconProps) => JSX.Element;
-  }
-
-  const renderTabBarIcon = (options: TabBarOptions, props: TabBarIconProps): JSX.Element => {
-    if (options.tabBarIcon && typeof options.tabBarIcon === 'function') {
-      return options.tabBarIcon(props);
-    }
-    
-    // Fallback icon if tabBarIcon is not provided
-    return <IconSymbol name="circle" color={props.color} size={props.size} />;
-  };
-
-  // Improved animated style for the sliding indicator
-  const indicatorStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: indicatorPosition.value }],
-      opacity: withTiming(1, { duration: 200 }),
-      width: TAB_WIDTH, // Fixed width for consistent sizing
-    };
-  });
+  }, [state.index, prevIndex, tabPositions, indicatorPosition]);
 
   return (
     <Animated.View 
@@ -260,21 +433,14 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           height: TAB_BAR_HEIGHT,
         }
       ]}
+      accessibilityRole="tablist"
     >
-      {/* Animated Background Indicator with improved styling */}
-      <Animated.View 
-        style={[
-          styles.tabIndicator,
-          indicatorStyle,
-          { 
-            backgroundColor: colors.primary + '20',
-            borderRadius: 20,
-          }
-        ]} 
-      />
+      {/* Animated Background Indicator */}
+      <TabIndicator position={indicatorPosition} accentColor={colors.primary} />
       
+      {/* Tab Items */}
       {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key] || {};
+        const { options } = descriptors[route.key] || { options: {} };
         const isFocused = state.index === index;
         const isAddButton = route.name === 'add-habit';
 
@@ -286,97 +452,67 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           });
 
           if (!isFocused && !event.defaultPrevented) {
-            // Check if the route exists before navigating
             try {
               // Use navigate with merge to avoid stacking screens
-              navigation.navigate({ name: route.name, params: undefined, merge: true });
+              navigation.navigate({ 
+                name: route.name, 
+                params: undefined, 
+                merge: true 
+              });
             } catch (error) {
               console.error(`Failed to navigate to ${route.name}:`, error);
             }
           }
         };
 
-        // Special styling for the add button (middle tab)
+        // Special rendering for add button (middle tab)
         if (isAddButton) {
           return (
-            <View 
+            <AddButton
               key={route.key}
-              style={[styles.tabItem, styles.addButtonContainer]}
-            >
-              <Animated.View
-                entering={FadeIn.delay(300).duration(500)}
-                style={styles.addButton}
-              >
-                <LinearGradient
-                  colors={gradientColors}
-                  style={styles.addButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Pressable
-                    onPress={onPress}
-                    style={({ pressed }) => [
-                      styles.addButtonContent,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    {renderTabBarIcon(options, {
-                      focused: isFocused,
-                      color: '#FFFFFF',
-                      size: 24,
-                    })}
-                  </Pressable>
-                </LinearGradient>
-              </Animated.View>
-              <ThemedText 
-                style={[
-                  styles.tabLabelCenter,
-                  { 
-                    color: isFocused ? colors.primary : colors.subtext,
-                    fontFamily: isFocused ? colors.fonts.semiBold : colors.fonts.medium,
-                  }
-                ]}
-              >
-                {options?.title || route.name}
-              </ThemedText>
-            </View>
+              route={route}
+              isFocused={isFocused}
+              onPress={onPress}
+              colors={colors}
+              options={{
+                ...options,
+                tabBarIcon: props => {
+                  const icon = options.tabBarIcon?.(props);
+                  return icon && React.isValidElement(icon) ? icon : <></>;
+                },
+              }}
+              gradientColors={gradientColors}
+            />
           );
         }
 
-        // Regular tab styling
+        // Regular tab rendering
         return (
-          <Pressable
+          <TabBarItem
             key={route.key}
+            route={route}
+            isFocused={isFocused}
             onPress={onPress}
-            style={styles.tabItem}
-          >
-            <View style={styles.tabIconContainer}>
-              {renderTabBarIcon(options, {
-                focused: isFocused,
-                color: isFocused ? colors.primary : colors.subtext,
-                size: 22,
-              })}
-            </View>
-            
-            <ThemedText 
-              style={[
-                styles.tabLabel,
-                { 
-                  color: isFocused ? colors.primary : colors.subtext,
-                  fontFamily: isFocused ? colors.fonts.semiBold : colors.fonts.regular,
-                }
-              ]}
-            >
-              {options?.title || route.name}
-            </ThemedText>
-          </Pressable>
+            colors={colors}
+            options={{
+              ...options,
+              tabBarIcon: props => {
+                const icon = options.tabBarIcon?.(props);
+                return icon && React.isValidElement(icon) ? icon : <></>;
+              },
+            }}
+          />
         );
       })}
     </Animated.View>
   );
 }
 
+// Optimized styles with better organization
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   floatingTabBar: {
     flexDirection: 'row',
     position: 'absolute',
@@ -389,16 +525,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 10,
     zIndex: 1000,
-    overflow: 'visible', // Changed from 'hidden' to allow the button to show
+    overflow: 'visible', // Allow the button to show
   },
   tabIndicator: {
     position: 'absolute',
     width: TAB_WIDTH,
-    height: '70%',  // Slightly shorter to better center behind icons
+    height: '85%',
     borderRadius: 20,
     zIndex: 0,
-    marginVertical: 10, // Increased margin to center it better vertically
-    top: 5, // Add top position to center it vertically
+    marginVertical: 10,
+    top: -6,
   },
   tabItem: {
     flex: 1,
@@ -414,13 +550,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  activeTabBackground: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    borderRadius: 15,
-    zIndex: -1,
-  },
   tabLabel: {
     fontSize: 10,
     marginTop: 2,
@@ -432,24 +561,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   addButtonContainer: {
+    flex: 1,
     justifyContent: 'flex-start',
+    alignItems: 'center',
     marginTop: -30,
     height: 90,
-    zIndex: 2, // Ensure it's above the tab bar
+    zIndex: 2,
   },
   addButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
     marginBottom: 4,
-    elevation: 8, // Increased from 5
+    elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, // Increased from 0.25
-    shadowRadius: 8, // Increased from 5
-    zIndex: 3, // Higher than the container
-    overflow: 'visible', // Make sure it's not being clipped
-    position: 'relative', // Ensure proper positioning
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 3,
+    overflow: 'visible',
+    position: 'relative',
   },
   addButtonGradient: {
     width: 56,
@@ -467,61 +598,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
-  },
-  expandIndicator: {
-    position: 'absolute',
-    top: 6,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  expandIndicatorBar: {
-    width: 40,
-    height: 3,
-    borderRadius: 1.5,
-    opacity: 0.5,
-  },
-  headerContainer: {
-    width: '100%',
-    overflow: 'hidden',
-  },
-  headerGradient: {
-    width: '100%',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 22,
-  },
-  profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
+  }
 });

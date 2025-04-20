@@ -42,7 +42,7 @@ export default function SettingsScreen() {
               // Call the logout function from auth store
               logout();
               // Navigate back to login screen
-              router.replace('/(auth)/login');
+              router.replace('/(auth)/landing');
             } catch (error) {
               console.error('Logout error:', error);
               Alert.alert('Logout Failed', 'An error occurred while logging out.');

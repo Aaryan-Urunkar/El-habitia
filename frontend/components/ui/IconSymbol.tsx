@@ -57,7 +57,9 @@ const MAPPING = {
   'arrow.up': 'arrow-upward',
   'bubble.left.and.bubble.right': 'forum',
   'arrowshape.turn.up.right': 'reply',
-  'trophy.fill': 'emoji-events'
+  'trophy.fill': 'emoji-events',
+  'chart.line.uptrend.xyaxis': 'show-chart',
+  'arrow.right': 'arrow-forward'
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
