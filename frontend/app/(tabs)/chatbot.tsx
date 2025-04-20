@@ -16,7 +16,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
-
+import { useThemeStore } from '@/store/themeStore';
 // Message type
 // Message type
 interface Message {
@@ -49,7 +49,7 @@ export default function ChatbotScreen() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-
+  const {mode} = useThemeStore()
   // Scroll to the bottom when new messages arrive
   useEffect(() => {
     if (messages.length > 0 && flatListRef.current) {
@@ -76,23 +76,39 @@ export default function ChatbotScreen() {
 
     try {
       // Make API request to FastAPI backend
-      const response = await fetch('https://68e5-103-104-226-58.ngrok-free.app/query-habits/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: "user123", // Replace with actual user ID if available
-          query: inputText.trim(),
-        }),
-      });
-
+      let response: any
+      if(mode==='dark') {
+        response = await fetch('https://3ed0-103-104-226-58.ngrok-free.app/query-habits/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: "user123", 
+            mode: "Action Mode",// Replace with actual user ID if available
+            query: inputText.trim(),
+          }),
+        });
+      }
+      else {
+        const response = await fetch('https://3ed0-103-104-226-58.ngrok-free.app/query-habits/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: "user123", 
+            mode: "Personal Growth Mode",// Replace with actual user ID if available
+            query: inputText.trim(),
+          }),
+        });
+      }
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
       const data = await response.json();
-
+      console.log(data)
       // Extract bot response
       let botResponse = "I'm sorry, I couldn't understand that.";
       if (data.message) {

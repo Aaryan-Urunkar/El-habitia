@@ -72,7 +72,7 @@ export default function SignupScreen() {
         console.log('[Signup] Starting signup process with email:', email);
         
         // Replace axios with fetch
-        const response = await fetch(`http://192.168.24.47:5001/api/auth/signup`, {
+        const response = await fetch(`10.10.114.36:5001/api/auth/signup`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
