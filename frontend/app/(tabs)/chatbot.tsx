@@ -91,7 +91,7 @@ export default function ChatbotScreen() {
         });
       }
       else {
-        const response = await fetch('https://3ed0-103-104-226-58.ngrok-free.app/query-habits/', {
+          response = await fetch('https://3ed0-103-104-226-58.ngrok-free.app/query-habits/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
