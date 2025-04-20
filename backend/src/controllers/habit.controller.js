@@ -1,6 +1,8 @@
 import { Habit } from "../models/habit.model.js"
 import { User } from "../models/user.model.js"
 import jwt from "jsonwebtoken"
+// Add missing import for HabitLog model
+import { HabitLog } from "../models/habitLog.model.js"
 
 export const createHabit = async(req, res) => {
 
@@ -41,40 +43,52 @@ export const createHabit = async(req, res) => {
 
 
 export const trackHabit = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1]
-  if (!token) return res.status(401).json({ message: 'Unauthorized' })
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    const userId = decoded.id
-
-    const { title : habitTitle } = req.params
-    const habit = await Habit.findOne({ title: habitTitle, user: userId })
-    if (!habit) return res.status(404).json({ message: 'Habit not found' })
-
-    const now = new Date()
-    const lastTracked = habit.lastTracked || habit.createdAt
-    const daysDiff = Math.floor((now - lastTracked) / (1000 * 60 * 60 * 24))
-
-    if (daysDiff === 1) {
-      habit.tracked.push(1)
-      habit.streak += 1
-    } else if (daysDiff > 1) {
-      habit.tracked.push(1)
-      habit.streak = 1
-    } else if (daysDiff === 0) {
-      return res.status(400).json({ message: 'Already tracked today' })
+    const token = req.headers.authorization?.split(' ')[1]
+    if (!token) return res.status(401).json({ message: 'Unauthorized' })
+      try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET)
+          const userId = decoded.userId
+          
+          const { title : habitTitle } = req.params
+          
+          const habit = await Habit.findOne({ title: habitTitle })
+          if (!habit) return res.status(404).json({ message: 'Habit not found' })
+  
+          const newHabitLog = await HabitLog.create({
+              habit:habit._id,
+              user:userId,
+              status:"completed"
+          })
+          
+          const lastTracked = habit.lastTracked
+          const now = new Date()
+  
+          if (!lastTracked) {
+              habit.tracked = [1]
+              habit.streak = 1
+          } else {
+          const daysDiff = Math.floor((now - lastTracked) / (1000 * 60 * 60 * 24))
+  
+          if (daysDiff === 1) {
+              habit.tracked.push(1)
+              habit.streak += 1
+          } else if (daysDiff > 1) {
+              habit.tracked.push(1)
+              habit.streak = 1
+          } else if (daysDiff === 0) {
+              return res.status(400).json({ message: 'Already tracked today' })
+          }
+          }
+  
+          habit.lastTracked = now
+          await habit.save()
+  
+          res.json({ message: 'Habit tracked', streak: habit.streak , newHabitLog})
+  
+    } catch (err) {
+      res.status(401).json({ message: 'Invalid token OR internal server error' })
     }
-
-    habit.lastTracked = now
-    await habit.save()
-
-    res.json({ message: 'Habit tracked', streak: habit.streak })
-
-  } catch (err) {
-    res.status(401).json({ message: 'Invalid token OR internal server error' })
   }
-}
 
 export const getHabit = async(req , res) =>{
     const token = req.headers.authorization?.split(' ')[1]

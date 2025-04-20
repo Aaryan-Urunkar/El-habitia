@@ -24,6 +24,29 @@ interface GetHabitsResponse {
   habits: Habit[];
 }
 
+// Track habit API function
+const trackHabit = async (token: string, habitTitle: string): Promise<any> => {
+  try {
+    const response = await fetch(`http://192.168.24.47:5001/api/habit/track-habit/${habitTitle}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to track habit');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
+
 const getHabits = async (token: string): Promise<GetHabitsResponse> => {
   try {
     const response = await fetch('http://192.168.24.47:5001/api/habit/get-habits', {
@@ -133,39 +156,60 @@ export default function DashboardScreen() {
     console.log('[Habits] Current completion status:', habitToUpdate.completed);
     
     try {
-      // Optimistically update the UI
-      setHabits(currentHabits => 
-        currentHabits.map(habit => {
-          if (habit.id === id) {
-            const updatedHabit = { ...habit, completed: !habit.completed };
-            console.log('[Habits] Updated habit in UI:', updatedHabit);
-            return updatedHabit;
-          }
-          return habit;
-        })
-      );
-      
-      // Use Firebase function to log habit completion
-      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-      const newCompletionStatus = !habitToUpdate.completed;
-      
-      // Placeholder for logging habit completion to Firebase or backend
-      console.log(`[Habits] Logging completion for habit ${id} on ${today} with status: ${newCompletionStatus}`);
-      console.log('[Habits] Habit completion status updated in Firebase');
-      
-      // Refresh habits after successful update
-      fetchHabits();
-      
+      // Only proceed with API call if habit is not completed
+      if (!habitToUpdate.completed) {
+        // Get token from AsyncStorage
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token) {
+          throw new Error('Authentication token not found');
+        }
+
+        // Optimistically update the UI
+        setHabits(currentHabits => 
+          currentHabits.map(habit => {
+            if (habit.id === id) {
+              const updatedHabit = { ...habit, completed: true };
+              console.log('[Habits] Updated habit in UI:', updatedHabit);
+              return updatedHabit;
+            }
+            return habit;
+          })
+        );
+        
+        // Call the track habit API
+        const response = await trackHabit(token, title);
+        console.log('[Habits] Habit tracking response:', response);
+        
+        // If the habit has a new streak, update it
+        if (response && response.streak) {
+          setHabits(currentHabits => 
+            currentHabits.map(habit => {
+              if (habit.id === id) {
+                return { ...habit, streak: response.streak };
+              }
+              return habit;
+            })
+          );
+        }
+        
+        // Move to "All Habits" tab after completion
+        setSelectedTab('all');
+      } else {
+        // If already completed, just toggle the UI without API call
+        // This is just for UI demonstration - typically you wouldn't allow "uncompleting" a habit
+        Alert.alert(
+          "Habit Already Completed", 
+          "This habit has already been completed today."
+        );
+      }
     } catch (err) {
       console.error('[Habits] Failed to update habit:', err);
       Alert.alert('Error', 'Failed to update habit. Please try again.');
       
       // Revert the optimistic update
-      const originalCompletion = habitToUpdate.completed;
-      console.log('[Habits] Reverting to original completion status:', originalCompletion);
       setHabits(currentHabits => 
         currentHabits.map(habit => 
-          habit.id === id ? { ...habit, completed: originalCompletion } : habit
+          habit.id === id ? { ...habit, completed: habitToUpdate.completed } : habit
         )
       );
     }
@@ -204,6 +248,7 @@ export default function DashboardScreen() {
     }
   };
 
+  // Filter habits for Today tab - only show uncompleted habits
   const todayHabits = habits.filter(h => !h.completed);
   console.log('[Habits] Today habits count:', todayHabits.length);
   

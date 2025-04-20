@@ -4,7 +4,7 @@ const router = express.Router()
 
 router.post("/create-habit" , createHabit)
 
-router.post("/track-habit" , trackHabit)
+router.post("/track-habit/:title" , trackHabit)
 
 router.get("/get-habit/:title" , getHabit)
 
