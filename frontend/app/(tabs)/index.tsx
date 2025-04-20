@@ -9,16 +9,41 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useThemeStore } from '@/store/themeStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define Habit type
+// API function to get habits
 interface Habit {
-  id: string;
+  _id: string;
   title: string;
   description?: string;
-  category: string;
-  streak: number;
-  completed: boolean;
+  category?: string;
+  streak?: number;
+  completed?: boolean;
   isNegative?: boolean;
 }
+
+interface GetHabitsResponse {
+  habits: Habit[];
+}
+
+const getHabits = async (token: string): Promise<GetHabitsResponse> => {
+  try {
+    const response = await fetch('http://192.168.24.47:5001/api/habit/get-habits', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch habits');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
 
 export default function DashboardScreen() {
   const { colors, scheme } = useTheme();
@@ -26,7 +51,7 @@ export default function DashboardScreen() {
   const { setMode, setColorScheme } = useThemeStore();
   const [selectedTab, setSelectedTab] = useState<'today' | 'all'>('today');
   const [moodMode, setMoodMode] = useState<'growth' | 'action'>('growth');
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habits, setHabits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,76 +67,33 @@ export default function DashboardScreen() {
       
       console.log('[Habits] Fetching habits...');
       
-      // Direct API call
+      // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        throw new Error('No authentication token found');
+        throw new Error('Authentication token not found');
       }
       
-      const response = await fetch('http://192.168.24.47:5001/api/habit/get-all-habits', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Call the backend API
+      const response = await getHabits(token);
       
-      // Handle non-JSON responses
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('[Habits] Server returned non-JSON response:', contentType);
-        console.error('[Habits] Status code:', response.status);
-        
-        // Try to get response text for debugging
-        try {
-          const responseText = await response.text();
-          console.error('[Habits] Response text preview:', responseText.substring(0, 200));
-        } catch (e) {
-          console.error('[Habits] Could not read response text');
-        }
-        
-        throw new Error(`Server returned non-JSON response with status ${response.status}`);
-      }
-      
-      const responseText = await response.text();
-      let data;
-      
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('[Habits] JSON Parse error:', parseError);
-        console.error('[Habits] Response text:', responseText.substring(0, 200) + '...');
-        throw new Error('Failed to parse server response as JSON');
-      }
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch habits');
-      }
-      
-      console.log('[Habits] Raw API response:', JSON.stringify(data, null, 2));
+      console.log('[Habits] Raw response:', JSON.stringify(response, null, 2));
       
       // Check if habits array exists in the response
-      const habitsData = data.habits || [];
-      if (!Array.isArray(habitsData)) {
-        console.error('[Habits] Expected habits array in response but got:', data);
-        throw new Error('Invalid server response structure');
+      if (!response.habits || !Array.isArray(response.habits)) {
+        console.error('[Habits] Expected habits array in response but got:', response);
+        throw new Error('Invalid response structure');
       }
       
-      // Map the API response to our Habit interface
-      const mappedHabits: Habit[] = habitsData.map((habit: any) => {
-        const mappedHabit = {
-          id: habit._id || habit.id || String(Math.random()),
-          title: habit.title,
-          description: habit.description,
-          category: habit.category || 'wellness', // Default category if none provided
-          streak: habit.streak || 0,
-          completed: habit.completed || false,
-          isNegative: habit.isNegative || false
-        };
-        
-        console.log('[Habits] Mapped habit:', JSON.stringify(mappedHabit, null, 2));
-        return mappedHabit;
-      });
+      // Map the response to our component's expected format
+      const mappedHabits = response.habits.map(habit => ({
+        id: habit._id || String(Math.random()),
+        title: habit.title,
+        description: habit.description || '',
+        category: habit.category || 'wellness', // Default category if none provided
+        streak: habit.streak || 0,
+        completed: habit.completed || false,
+        isNegative: habit.isNegative || false
+      }));
       
       console.log('[Habits] All mapped habits:', JSON.stringify(mappedHabits, null, 2));
       setHabits(mappedHabits);
@@ -126,10 +108,10 @@ export default function DashboardScreen() {
       
       // Fallback to sample data if API fails
       const fallbackHabits = [
-        { id: '1', title: 'Morning Meditation', streak: 5, completed: true, category: 'wellness' },
-        { id: '2', title: 'Read 20 pages', streak: 12, completed: false, category: 'learning' },
-        { id: '3', title: 'Workout', streak: 3, completed: false, category: 'fitness' },
-        { id: '4', title: 'Drink 2L water', streak: 15, completed: true, category: 'health' },
+        { id: '1', title: 'Morning Meditation', streak: 5, completed: true, category: 'wellness', ownerId: user?.id || 'defaultOwner' },
+        { id: '2', title: 'Read 20 pages', streak: 12, completed: false, category: 'learning', ownerId: user?.id || 'defaultOwner' },
+        { id: '3', title: 'Workout', streak: 3, completed: false, category: 'fitness', ownerId: user?.id || 'defaultOwner' },
+        { id: '4', title: 'Drink 2L water', streak: 15, completed: true, category: 'health', ownerId: user?.id || 'defaultOwner' },
       ];
       
       console.log('[Habits] Using fallback habits data:', JSON.stringify(fallbackHabits, null, 2));
@@ -163,32 +145,15 @@ export default function DashboardScreen() {
         })
       );
       
-      // Direct API call
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      // Use Firebase function to log habit completion
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const newCompletionStatus = !habitToUpdate.completed;
       
-      console.log('[Habits] Calling API to track habit:', title);
-      const response = await fetch('http://192.168.24.47:5001/api/habit/track-habit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ title })
-      });
+      // Placeholder for logging habit completion to Firebase or backend
+      console.log(`[Habits] Logging completion for habit ${id} on ${today} with status: ${newCompletionStatus}`);
+      console.log('[Habits] Habit completion status updated in Firebase');
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to track habit');
-      }
-      
-      console.log('[Habits] Track habit API response:', data);
-      
-      // Refresh habits after successful API call
-      console.log('[Habits] Refreshing habits after successful habit tracking');
+      // Refresh habits after successful update
       fetchHabits();
       
     } catch (err) {

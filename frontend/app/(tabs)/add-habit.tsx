@@ -9,6 +9,7 @@ import {
   Platform,
   Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -17,7 +18,6 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { TextInput } from '@/components/ui/TextInput';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
-import { createHabit } from '@/api/habit';
 
 // Habit categories
 const CATEGORIES = [
@@ -27,6 +27,40 @@ const CATEGORIES = [
   { id: 'health', name: 'Health', icon: 'drop.fill' },
   { id: 'productivity', name: 'Productivity', icon: 'checkmark.circle.fill' },
 ];
+
+// Function to create a habit via API
+interface HabitData {
+  title: string;
+  description?: string;
+  isNegative: boolean;
+  category: string;
+  recurrence: string;
+  isPublic: boolean;
+}
+
+interface ErrorResponse {
+  msg?: string;
+}
+
+const createHabit = async (habitData: HabitData): Promise<any> => {
+  const token = await AsyncStorage.getItem('userToken');
+  
+  const response = await fetch('http://192.168.24.47:5001/api/habit/create-habit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(habitData)
+  });
+  
+  if (!response.ok) {
+    const errorData: ErrorResponse = await response.json();
+    throw new Error(errorData.msg || 'Failed to create habit');
+  }
+  
+  return await response.json();
+};
 
 export default function AddHabitScreen() {
   const { colors, scheme } = useTheme();
@@ -63,7 +97,10 @@ export default function AddHabitScreen() {
       await createHabit({
         title: name,
         description: description,
-        isNegative: isNegative
+        isNegative: isNegative,
+        category: category,
+        recurrence: recurrence,
+        isPublic: isPublic
       });
       
       // Immediately redirect to index tab after successful creation

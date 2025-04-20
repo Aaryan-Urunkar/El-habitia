@@ -98,7 +98,7 @@ export const getHabitsOfUser = async(req , res) =>{
     if (!token) return res.status(401).json({ message: 'Unauthorized' })
     try{
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        const userId = decoded.id
+        const userId = decoded.userId
         
         const habits = await Habit.find({user: userId })
         return res.status(200).json({msg : "Here are all habits.", habits})
