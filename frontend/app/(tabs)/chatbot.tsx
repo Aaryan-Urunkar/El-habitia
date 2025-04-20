@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  TextInput, 
-  TouchableOpacity, 
-  FlatList, 
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-  ActivityIndicator 
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -17,6 +17,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
 
+// Message type
 // Message type
 interface Message {
   id: string;
@@ -32,6 +33,14 @@ const WELCOME_MESSAGE: Message = {
   sender: 'bot',
   timestamp: new Date(),
 };
+
+// Suggested questions
+const SUGGESTIONS = [
+  "How do I build a meditation habit?",
+  "Tips for drinking more water",
+  "How to track my progress better?",
+  "Help me stay motivated"
+];
 
 export default function ChatbotScreen() {
   const { colors, scheme } = useTheme();
@@ -67,7 +76,7 @@ export default function ChatbotScreen() {
 
     try {
       // Make API request to FastAPI backend
-      const response = await fetch('https://1719-103-104-226-58.ngrok-free.app/query-schedules/', {
+      const response = await fetch('https://68e5-103-104-226-58.ngrok-free.app/query-habits/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
